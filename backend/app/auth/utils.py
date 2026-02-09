@@ -5,7 +5,7 @@ import hashlib
 from jose import jwt, JWTError
 import bcrypt
 
-from ..config import get_settings
+from ..settings import get_settings
 
 settings = get_settings()
 

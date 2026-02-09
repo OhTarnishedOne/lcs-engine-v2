@@ -23,9 +23,14 @@ class User(Base):
     )
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), onupdate=utc_now)
 
-    # Relationship to profile
+    # Relationship to profile (basic profile from Phase 1)
     profile: Mapped["Profile"] = relationship(
         "Profile", back_populates="user", uselist=False, cascade="all, delete-orphan"
+    )
+
+    # Relationship to extended user profile (onboarding data)
+    user_profile: Mapped["UserProfile"] = relationship(
+        "UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
 
     def __repr__(self) -> str:
