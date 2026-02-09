@@ -8,6 +8,7 @@ from .database import SessionLocal
 from .auth.utils import verify_token
 from .common.errors import UnauthorizedError
 from .db.models import User
+from .integrations import AnthropicClient
 
 security = HTTPBearer()
 
@@ -39,3 +40,8 @@ def get_current_user(
         raise UnauthorizedError("User not found")
 
     return user
+
+
+def get_anthropic_client() -> AnthropicClient:
+    """Get the Anthropic client for AI chat."""
+    return AnthropicClient()

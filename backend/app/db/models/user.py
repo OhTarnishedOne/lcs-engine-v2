@@ -33,5 +33,10 @@ class User(Base):
         "UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan"
     )
 
+    # Relationship to chat conversations
+    conversations: Mapped[list["Conversation"]] = relationship(
+        "Conversation", back_populates="user", cascade="all, delete-orphan"
+    )
+
     def __repr__(self) -> str:
         return f"<User {self.email}>"

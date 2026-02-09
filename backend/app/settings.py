@@ -14,8 +14,13 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
 
-    # External APIs (optional for Phase 1)
+    # Anthropic / AI
     anthropic_api_key: str = ""
+    anthropic_model: str = "claude-sonnet-4-20250514"
+    chat_max_tokens: int = 1024
+    chat_history_limit: int = 20
+
+    # External APIs
     alpaca_api_key: str = ""
     alpaca_secret_key: str = ""
     alpaca_base_url: str = "https://paper-api.alpaca.markets"
