@@ -6,15 +6,16 @@ Supports streaming responses via Server-Sent Events (SSE).
 """
 
 import json
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from ..deps import get_db, get_current_user, get_anthropic_client
+from ..deps import get_db, get_current_user, get_ai_client
 from ..db.models import User
-from ..integrations import AnthropicClient
+from ..integrations import ResilientAIClient
 from ..common.errors import NotFoundError
 from .service import ChatService
 from .schemas import (
@@ -27,13 +28,31 @@ from .schemas import (
 )
 
 router = APIRouter(tags=["chat"])
+logger = logging.getLogger(__name__)
 
 
 def get_chat_service(
     db: Session = Depends(get_db),
-    anthropic: AnthropicClient = Depends(get_anthropic_client)
+    ai_client: ResilientAIClient = Depends(get_ai_client)
 ) -> ChatService:
-    return ChatService(db, anthropic)
+    return ChatService(db, ai_client)
+
+
+def _get_user_friendly_error(error: Exception) -> str:
+    """Map API errors to user-friendly messages."""
+    error_name = type(error).__name__
+    error_str = str(error).lower()
+
+    if "AuthenticationError" in error_name or "401" in str(error):
+        return "I'm having trouble connecting right now. Please try again later."
+    elif "RateLimitError" in error_name or "429" in str(error):
+        return "I'm getting a lot of questions right now. Give me a moment and try again."
+    elif "overloaded" in error_str or "529" in str(error):
+        return "I'm a bit overloaded at the moment. Try again in a few seconds."
+    elif "PermissionDeniedError" in error_name or "403" in str(error):
+        return "I'm having trouble connecting right now. Please try again later."
+    else:
+        return "Something went wrong on my end. Please try sending your message again."
 
 
 @router.post("/messages")
@@ -61,12 +80,18 @@ async def send_message(
     ```
     """
     async def event_stream():
-        async for event in service.send_message_stream(
-            user_id=current_user.id,
-            message=request.message,
-            conversation_id=request.conversation_id
-        ):
-            yield f"data: {json.dumps(event)}\n\n"
+        try:
+            async for event in service.send_message_stream(
+                user_id=current_user.id,
+                message=request.message,
+                conversation_id=request.conversation_id
+            ):
+                yield f"data: {json.dumps(event)}\n\n"
+        except Exception as e:
+            error_name = type(e).__name__
+            logger.error(f"Chat stream error: {error_name}: {e}")
+            user_message = _get_user_friendly_error(e)
+            yield f"data: {json.dumps({'type': 'error', 'content': user_message})}\n\n"
 
     return StreamingResponse(
         event_stream(),

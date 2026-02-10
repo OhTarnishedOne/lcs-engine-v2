@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 
@@ -14,11 +15,14 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
 
-    # Anthropic / AI
+    # Anthropic / AI (primary)
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-sonnet-4-20250514"
     chat_max_tokens: int = 1024
     chat_history_limit: int = 20
+
+    # OpenAI (fallback - optional)
+    openai_api_key: Optional[str] = None
 
     # External APIs
     alpaca_api_key: str = ""

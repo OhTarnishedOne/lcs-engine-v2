@@ -8,9 +8,11 @@ from .database import SessionLocal
 from .auth.utils import verify_token
 from .common.errors import UnauthorizedError
 from .db.models import User
-from .integrations import AnthropicClient
+from .integrations import AnthropicClient, OpenAIFallbackClient, ResilientAIClient
+from .settings import get_settings
 
 security = HTTPBearer()
+settings = get_settings()
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -43,5 +45,24 @@ def get_current_user(
 
 
 def get_anthropic_client() -> AnthropicClient:
-    """Get the Anthropic client for AI chat."""
+    """Get the Anthropic client for AI chat (legacy, use get_ai_client instead)."""
     return AnthropicClient()
+
+
+def get_ai_client() -> ResilientAIClient:
+    """
+    Get the resilient AI client with automatic fallback.
+
+    Primary: Anthropic Claude
+    Fallback: OpenAI GPT-4o (only if OPENAI_API_KEY is configured)
+    """
+    anthropic = AnthropicClient()
+
+    openai_fallback = None
+    if settings.openai_api_key:
+        openai_fallback = OpenAIFallbackClient(api_key=settings.openai_api_key)
+
+    return ResilientAIClient(
+        anthropic_client=anthropic,
+        openai_client=openai_fallback,
+    )

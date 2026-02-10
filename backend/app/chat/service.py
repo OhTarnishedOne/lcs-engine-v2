@@ -12,7 +12,7 @@ from typing import AsyncGenerator, Optional
 from sqlalchemy.orm import Session
 
 from ..db.models import User, UserProfile, Conversation, Message
-from ..integrations import AnthropicClient
+from ..integrations import ResilientAIClient
 from ..settings import get_settings
 
 settings = get_settings()
@@ -21,9 +21,9 @@ settings = get_settings()
 class ChatService:
     """Service for managing AI chat conversations."""
 
-    def __init__(self, db: Session, anthropic_client: AnthropicClient):
+    def __init__(self, db: Session, ai_client: ResilientAIClient):
         self.db = db
-        self.anthropic = anthropic_client
+        self.anthropic = ai_client  # Keep attribute name for compatibility
 
     def build_system_prompt(self, user_profile: Optional[UserProfile]) -> str:
         """
