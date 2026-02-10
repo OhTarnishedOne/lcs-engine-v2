@@ -5,67 +5,103 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   GraduationCap,
-  BarChart3,
-  LineChart,
+  Layers,
+  TrendingUp,
+  Target,
   MessageSquare,
   X,
+  BarChart3,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
 import { useUIStore } from "@/stores/ui-store";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "AI Chat", href: "/chat", icon: MessageSquare },
+  { name: "Strategies", href: "/strategies", icon: Layers },
+  { name: "Paper Trade", href: "/paper-trade", icon: TrendingUp },
+  { name: "Probability Lab", href: "/probability-lab", icon: Target },
+];
+
+const bottomNav = [
   { name: "Onboarding", href: "/onboarding", icon: GraduationCap },
-  { name: "Strategies", href: "/strategies", icon: BarChart3 },
-  { name: "Paper Trade", href: "/paper-trade", icon: LineChart },
-  { name: "Probability Lab", href: "/probability-lab", icon: BarChart3 },
-  { name: "Chat", href: "/chat", icon: MessageSquare },
 ];
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
 
   return (
-    <nav className="flex flex-col gap-1 p-2">
-      {navigation.map((item) => {
-        const isActive = pathname === item.href;
-        return (
-          <Link
-            key={item.name}
-            href={item.href}
-            onClick={onNavigate}
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-              isActive
-                ? "bg-blue-50 text-blue-600"
-                : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-            )}
-          >
-            <item.icon className="h-5 w-5" />
-            {item.name}
-          </Link>
-        );
-      })}
+    <nav className="flex flex-1 flex-col">
+      <div className="flex flex-col gap-1 p-3">
+        {navigation.map((item) => {
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              onClick={onNavigate}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+                isActive
+                  ? "bg-[#00D4AA]/10 text-[#00D4AA] border border-[#00D4AA]/20"
+                  : "text-gray-400 hover:bg-[#1A2942] hover:text-gray-100"
+              )}
+            >
+              <item.icon className={cn("h-5 w-5", isActive && "text-[#00D4AA]")} />
+              {item.name}
+            </Link>
+          );
+        })}
+      </div>
+
+      <div className="mt-auto border-t border-gray-800 p-3">
+        {bottomNav.map((item) => {
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              onClick={onNavigate}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+                isActive
+                  ? "bg-[#00D4AA]/10 text-[#00D4AA] border border-[#00D4AA]/20"
+                  : "text-gray-400 hover:bg-[#1A2942] hover:text-gray-100"
+              )}
+            >
+              <item.icon className={cn("h-5 w-5", isActive && "text-[#00D4AA]")} />
+              {item.name}
+            </Link>
+          );
+        })}
+      </div>
     </nav>
   );
 }
 
 export function Sidebar() {
-  const pathname = usePathname();
-
   return (
-    <aside className="hidden w-64 flex-shrink-0 border-r bg-white lg:block">
+    <aside className="hidden w-64 flex-shrink-0 border-r border-gray-800 bg-[#0A1628] lg:flex lg:flex-col">
       <div className="flex h-full flex-col">
-        <div className="flex-1 overflow-y-auto py-4">
+        {/* Logo */}
+        <div className="flex items-center gap-2 border-b border-gray-800 px-5 py-5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#00D4AA]">
+            <BarChart3 className="h-4 w-4 text-[#0A1628]" />
+          </div>
+          <span className="text-lg font-bold text-white">LCS Engine</span>
+        </div>
+
+        {/* Navigation */}
+        <div className="flex flex-1 flex-col overflow-y-auto py-2">
           <NavLinks />
         </div>
-        <Separator />
-        <div className="p-4">
-          <p className="text-xs text-slate-500">LCS Engine v2</p>
+
+        {/* Version */}
+        <div className="border-t border-gray-800 p-4">
+          <p className="text-xs text-gray-600">v2.0 • Phase 6</p>
         </div>
       </div>
     </aside>
@@ -77,24 +113,37 @@ export function MobileSidebar() {
 
   return (
     <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-      <SheetContent side="left" className="w-64 p-0">
+      <SheetContent
+        side="left"
+        className="w-64 border-r border-gray-800 bg-[#0A1628] p-0"
+      >
         <div className="flex h-full flex-col">
-          <div className="flex items-center justify-between border-b px-4 py-3">
-            <span className="text-lg font-semibold">Menu</span>
+          {/* Header */}
+          <div className="flex items-center justify-between border-b border-gray-800 px-4 py-4">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#00D4AA]">
+                <BarChart3 className="h-4 w-4 text-[#0A1628]" />
+              </div>
+              <span className="text-lg font-bold text-white">LCS Engine</span>
+            </div>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setSidebarOpen(false)}
+              className="text-gray-400 hover:bg-[#1A2942] hover:text-white"
             >
               <X className="h-5 w-5" />
             </Button>
           </div>
-          <div className="flex-1 overflow-y-auto py-4">
+
+          {/* Navigation */}
+          <div className="flex flex-1 flex-col overflow-y-auto py-2">
             <NavLinks onNavigate={() => setSidebarOpen(false)} />
           </div>
-          <Separator />
-          <div className="p-4">
-            <p className="text-xs text-slate-500">LCS Engine v2</p>
+
+          {/* Version */}
+          <div className="border-t border-gray-800 p-4">
+            <p className="text-xs text-gray-600">v2.0 • Phase 6</p>
           </div>
         </div>
       </SheetContent>

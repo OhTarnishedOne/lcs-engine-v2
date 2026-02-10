@@ -9,9 +9,13 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@fontsource/jetbrains-mono": "^5.2.8",
+    "@fontsource/plus-jakarta-sans": "^5.2.8",
     "@hookform/resolvers": "^5.2.2",
+    "@tanstack/react-query": "^5.90.20",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "framer-motion": "^12.34.0",
     "lucide-react": "^0.563.0",
     "next": "16.1.6",
     "next-themes": "^0.4.6",
@@ -19,6 +23,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-hook-form": "^7.71.1",
+    "recharts": "^3.7.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
     "zod": "^4.3.6",

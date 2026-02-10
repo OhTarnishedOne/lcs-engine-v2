@@ -1,23 +1,547 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+"use client";
+
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+} from "recharts";
+import {
+  Target,
+  Clock,
+  ChevronRight,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+  TrendingUp,
+  Brain,
+  X,
+} from "lucide-react";
+
+import { api } from "@/lib/api/client";
+import { Button } from "@/components/ui/button";
+import { SkeletonCard, EmptyState } from "@/components/shared";
+import type { PredictionMarket, CalibrationResponse } from "@/lib/api/types";
+
+const CATEGORY_ICONS: Record<string, string> = {
+  fed: "bank",
+  cpi: "chart",
+  gdp: "trending",
+  jobs: "users",
+  default: "target",
+};
+
+const CATEGORY_COLORS: Record<string, string> = {
+  fed: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  cpi: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+  gdp: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+  jobs: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+  default: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+};
 
 export default function ProbabilityLabPage() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Probability Lab</h1>
-        <p className="text-slate-600">Improve your forecasting skills with real-world predictions.</p>
+  const queryClient = useQueryClient();
+  const [selectedMarket, setSelectedMarket] = useState<PredictionMarket | null>(null);
+  const [probability, setProbability] = useState(50);
+  const [reasoning, setReasoning] = useState("");
+  const [showResult, setShowResult] = useState<{
+    predicted: number;
+    market: number;
+  } | null>(null);
+
+  // Fetch markets
+  const { data: marketsData, isLoading: marketsLoading } = useQuery({
+    queryKey: ["markets"],
+    queryFn: () => api.getMarkets(),
+  });
+
+  // Fetch user predictions
+  const { data: predictionsData } = useQuery({
+    queryKey: ["predictions"],
+    queryFn: () => api.getPredictions(),
+  });
+
+  // Fetch calibration
+  const { data: calibration, isLoading: calibrationLoading } = useQuery({
+    queryKey: ["calibration"],
+    queryFn: () => api.getCalibration(),
+  });
+
+  // Submit prediction
+  const submitMutation = useMutation({
+    mutationFn: (data: { market_id: string; probability: number; reasoning?: string }) =>
+      api.submitPrediction(data),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["predictions"] });
+      queryClient.invalidateQueries({ queryKey: ["calibration"] });
+      queryClient.invalidateQueries({ queryKey: ["markets"] });
+      setShowResult({
+        predicted: result.predicted_probability * 100,
+        market: (result.market_probability ?? 0) * 100,
+      });
+    },
+  });
+
+  const markets = marketsData?.markets || [];
+  const predictions = predictionsData?.predictions || [];
+  const predictedMarketIds = new Set(predictions.map((p) => p.market_id));
+
+  const handleSubmitPrediction = () => {
+    if (!selectedMarket) return;
+    submitMutation.mutate({
+      market_id: selectedMarket.id,
+      probability: probability / 100,
+      reasoning: reasoning || undefined,
+    });
+  };
+
+  const closeModal = () => {
+    setSelectedMarket(null);
+    setProbability(50);
+    setReasoning("");
+    setShowResult(null);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  const getCategoryColor = (category: string) => {
+    return CATEGORY_COLORS[category.toLowerCase()] || CATEGORY_COLORS.default;
+  };
+
+  // Calibration chart data
+  const calibrationData = [
+    { predicted: 0, actual: 0, perfect: 0 },
+    { predicted: 10, actual: 10, perfect: 10 },
+    { predicted: 20, actual: 20, perfect: 20 },
+    { predicted: 30, actual: 30, perfect: 30 },
+    { predicted: 40, actual: 40, perfect: 40 },
+    { predicted: 50, actual: 50, perfect: 50 },
+    { predicted: 60, actual: 60, perfect: 60 },
+    { predicted: 70, actual: 70, perfect: 70 },
+    { predicted: 80, actual: 80, perfect: 80 },
+    { predicted: 90, actual: 90, perfect: 90 },
+    { predicted: 100, actual: 100, perfect: 100 },
+  ];
+
+  if (calibration?.calibration_curve) {
+    calibration.calibration_curve.forEach((bucket) => {
+      const index = Math.floor(bucket.predicted_avg * 10);
+      if (index >= 0 && index < calibrationData.length) {
+        calibrationData[index].actual = bucket.actual_pct * 100;
+      }
+    });
+  }
+
+  if (marketsLoading) {
+    return (
+      <div className="mx-auto max-w-6xl space-y-6">
+        <div className="h-8 w-48 rounded skeleton-shimmer" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <SkeletonCard key={i} lines={3} />
+          ))}
+        </div>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Coming Soon</CardTitle>
-          <CardDescription>Probability Lab will be available in Phase 5.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-slate-600">
-            Make predictions on real-world events and track your calibration score.
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-6xl">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-6"
+      >
+        <h1 className="text-2xl font-bold text-white">Probability Lab</h1>
+        <p className="mt-1 text-gray-400">
+          Test your forecasting skills on economic events
+        </p>
+      </motion.div>
+
+      {/* Calibration Stats */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="mb-6 grid gap-4 sm:grid-cols-3"
+      >
+        <div className="rounded-xl border border-gray-800 bg-[#111827] p-5">
+          <p className="text-sm text-gray-400">Total Predictions</p>
+          <p className="mt-1 text-2xl font-bold font-mono text-white">
+            {calibration?.total_predictions ?? 0}
           </p>
-        </CardContent>
-      </Card>
+        </div>
+        <div className="rounded-xl border border-gray-800 bg-[#111827] p-5">
+          <p className="text-sm text-gray-400">Resolved</p>
+          <p className="mt-1 text-2xl font-bold font-mono text-white">
+            {calibration?.resolved_predictions ?? 0}
+          </p>
+        </div>
+        <div className="rounded-xl border border-gray-800 bg-[#111827] p-5">
+          <p className="text-sm text-gray-400">Brier Score</p>
+          <p className="mt-1 text-2xl font-bold font-mono text-white">
+            {calibration?.average_brier_score !== null
+              ? calibration?.average_brier_score.toFixed(3)
+              : "—"}
+          </p>
+          <p className="mt-1 text-xs text-gray-500">Lower is better (0 = perfect)</p>
+        </div>
+      </motion.div>
+
+      {/* Markets Grid */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="mb-8"
+      >
+        <h2 className="mb-4 text-lg font-semibold text-white">Active Markets</h2>
+        {markets.length === 0 ? (
+          <EmptyState
+            icon={Target}
+            title="No markets available"
+            description="Check back later for new prediction markets."
+          />
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {markets.map((market, index) => {
+              const hasPredicted = predictedMarketIds.has(market.id);
+              return (
+                <motion.div
+                  key={market.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 + index * 0.03 }}
+                >
+                  <button
+                    onClick={() => !hasPredicted && setSelectedMarket(market)}
+                    disabled={hasPredicted}
+                    className={`w-full rounded-xl border bg-[#111827] p-5 text-left transition-all ${
+                      hasPredicted
+                        ? "border-gray-800 opacity-60 cursor-not-allowed"
+                        : "border-gray-800 hover:border-[#00D4AA]/50 cursor-pointer card-hover-lift"
+                    }`}
+                  >
+                    <div className="mb-3 flex items-center justify-between">
+                      <span
+                        className={`inline-flex rounded-md border px-2 py-0.5 text-xs font-medium ${getCategoryColor(
+                          market.category
+                        )}`}
+                      >
+                        {market.category}
+                      </span>
+                      {hasPredicted ? (
+                        <CheckCircle className="h-4 w-4 text-[#00D4AA]" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-gray-500" />
+                      )}
+                    </div>
+                    <h3 className="mb-2 font-medium text-white line-clamp-2">
+                      {market.title}
+                    </h3>
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <Clock className="h-3 w-3" />
+                      <span>Closes {formatDate(market.close_date)}</span>
+                    </div>
+                    {hasPredicted && (
+                      <p className="mt-2 text-xs text-[#00D4AA]">
+                        Already predicted
+                      </p>
+                    )}
+                  </button>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+      </motion.div>
+
+      {/* Calibration Section */}
+      {(calibration?.total_predictions ?? 0) > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="grid gap-6 lg:grid-cols-2"
+        >
+          {/* Calibration Chart */}
+          <div className="rounded-xl border border-gray-800 bg-[#111827] p-5">
+            <h3 className="mb-4 font-semibold text-white">Calibration Curve</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={calibrationData}>
+                  <XAxis
+                    dataKey="predicted"
+                    stroke="#6B7280"
+                    tick={{ fill: "#9CA3AF", fontSize: 12 }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    stroke="#6B7280"
+                    tick={{ fill: "#9CA3AF", fontSize: 12 }}
+                    tickLine={false}
+                    axisLine={false}
+                    domain={[0, 100]}
+                  />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="rounded-lg border border-gray-700 bg-[#1F2937] px-3 py-2 text-sm">
+                            <p className="text-gray-400">
+                              Predicted: {payload[0].payload.predicted}%
+                            </p>
+                            <p className="text-[#00D4AA]">
+                              Actual: {payload[0].payload.actual.toFixed(0)}%
+                            </p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="perfect"
+                    stroke="#374151"
+                    strokeDasharray="5 5"
+                    dot={false}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="actual"
+                    stroke="#00D4AA"
+                    strokeWidth={2}
+                    dot={{ fill: "#00D4AA", r: 4 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <p className="mt-2 text-center text-xs text-gray-500">
+              Perfect calibration follows the diagonal line
+            </p>
+          </div>
+
+          {/* Detected Biases */}
+          <div className="rounded-xl border border-gray-800 bg-[#111827] p-5">
+            <h3 className="mb-4 flex items-center gap-2 font-semibold text-white">
+              <Brain className="h-5 w-5 text-[#00D4AA]" />
+              Detected Biases
+            </h3>
+            {!calibration?.detected_biases || calibration.detected_biases.length === 0 ? (
+              <div className="rounded-lg bg-[#1A2942]/50 p-4 text-center">
+                <p className="text-sm text-gray-400">
+                  No biases detected yet. Make more predictions to discover patterns.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {calibration.detected_biases.map((bias, i) => (
+                  <div
+                    key={i}
+                    className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4"
+                  >
+                    <h4 className="mb-1 font-medium text-amber-400 capitalize">
+                      {bias.bias_type.replace(/_/g, " ")}
+                    </h4>
+                    <p className="mb-2 text-sm text-gray-300">{bias.description}</p>
+                    <p className="text-xs text-gray-500">
+                      <span className="text-amber-400">Investing impact:</span>{" "}
+                      {bias.investing_impact}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Prediction Modal */}
+      <AnimatePresence>
+        {selectedMarket && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            onClick={closeModal}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              className="w-full max-w-lg rounded-xl border border-gray-800 bg-[#111827] p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {showResult ? (
+                // Result view
+                <div className="text-center">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring" }}
+                    className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#00D4AA]/20"
+                  >
+                    <CheckCircle className="h-8 w-8 text-[#00D4AA]" />
+                  </motion.div>
+
+                  <h3 className="mb-6 text-lg font-semibold text-white">
+                    Prediction Submitted
+                  </h3>
+
+                  <div className="mb-6 flex items-center justify-center gap-8">
+                    <div className="text-center">
+                      <p className="text-sm text-gray-400">Your prediction</p>
+                      <p className="text-3xl font-bold font-mono text-white">
+                        {showResult.predicted.toFixed(0)}%
+                      </p>
+                    </div>
+                    <div className="h-16 w-px bg-gray-700" />
+                    <motion.div
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.3 }}
+                      className="text-center"
+                    >
+                      <p className="text-sm text-gray-400">Market consensus</p>
+                      <p className="text-3xl font-bold font-mono text-[#00D4AA]">
+                        {showResult.market.toFixed(0)}%
+                      </p>
+                    </motion.div>
+                  </div>
+
+                  <div className="mb-6 rounded-lg bg-[#1A2942]/50 p-4">
+                    <p className="text-sm text-gray-300">
+                      {Math.abs(showResult.predicted - showResult.market) <= 10
+                        ? "Your prediction is close to the market consensus."
+                        : showResult.predicted > showResult.market
+                        ? "You're more confident than the market."
+                        : "You're less confident than the market."}
+                    </p>
+                  </div>
+
+                  <Button
+                    onClick={closeModal}
+                    className="w-full bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0]"
+                  >
+                    Done
+                  </Button>
+                </div>
+              ) : (
+                // Prediction form
+                <>
+                  <div className="mb-4 flex items-center justify-between">
+                    <span
+                      className={`inline-flex rounded-md border px-2 py-0.5 text-xs font-medium ${getCategoryColor(
+                        selectedMarket.category
+                      )}`}
+                    >
+                      {selectedMarket.category}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={closeModal}
+                      className="text-gray-400 hover:text-white"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <h3 className="mb-2 text-lg font-semibold text-white">
+                    {selectedMarket.title}
+                  </h3>
+
+                  {selectedMarket.description && (
+                    <p className="mb-4 text-sm text-gray-400">
+                      {selectedMarket.description}
+                    </p>
+                  )}
+
+                  <div className="mb-6 flex items-center gap-2 text-sm text-gray-500">
+                    <Clock className="h-4 w-4" />
+                    <span>Closes {formatDate(selectedMarket.close_date)}</span>
+                  </div>
+
+                  {/* Probability slider */}
+                  <div className="mb-6">
+                    <div className="mb-2 flex items-center justify-between">
+                      <label className="text-sm text-gray-400">
+                        Your probability estimate
+                      </label>
+                      <span className="text-2xl font-bold font-mono text-[#00D4AA]">
+                        {probability}%
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={probability}
+                      onChange={(e) => setProbability(parseInt(e.target.value))}
+                      className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#00D4AA]"
+                    />
+                    <div className="mt-1 flex justify-between text-xs text-gray-500">
+                      <span>Very unlikely</span>
+                      <span>Very likely</span>
+                    </div>
+                  </div>
+
+                  {/* Reasoning (optional) */}
+                  <div className="mb-6">
+                    <label className="mb-2 block text-sm text-gray-400">
+                      Reasoning (optional)
+                    </label>
+                    <textarea
+                      value={reasoning}
+                      onChange={(e) => setReasoning(e.target.value)}
+                      placeholder="Why do you think this?"
+                      rows={3}
+                      className="w-full rounded-lg border border-gray-700 bg-[#1A2942] px-4 py-3 text-white placeholder:text-gray-500 focus:border-[#00D4AA] focus:outline-none focus:ring-1 focus:ring-[#00D4AA]"
+                    />
+                  </div>
+
+                  <div className="rounded-lg bg-[#1A2942]/50 p-3 mb-4">
+                    <p className="text-xs text-gray-400 flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-amber-400" />
+                      The market probability is hidden until you submit. This prevents
+                      anchoring bias.
+                    </p>
+                  </div>
+
+                  <Button
+                    onClick={handleSubmitPrediction}
+                    disabled={submitMutation.isPending}
+                    className="w-full bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0]"
+                  >
+                    {submitMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Target className="mr-2 h-4 w-4" />
+                    )}
+                    Submit Prediction
+                  </Button>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
