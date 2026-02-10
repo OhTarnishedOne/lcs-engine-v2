@@ -70,8 +70,7 @@ class AnthropicClient:
             Text chunks as they arrive from the API
         """
         if not self.is_configured():
-            yield "I apologize, but the AI service is not currently configured. Please contact support."
-            return
+            raise RuntimeError("Anthropic client is not configured")
 
         last_error = None
 
@@ -127,7 +126,7 @@ class AnthropicClient:
             The complete response text
         """
         if not self.is_configured():
-            return "Untitled Conversation"
+            raise RuntimeError("Anthropic client is not configured")
 
         last_error = None
 
