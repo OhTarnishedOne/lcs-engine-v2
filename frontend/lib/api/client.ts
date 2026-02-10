@@ -6,6 +6,7 @@
 import type {
   AuthResponse,
   OnboardingSection,
+  OnboardingQuestionsResponse,
   OnboardingProgress,
   UserProfile,
   OnboardingWelcome,
@@ -217,8 +218,8 @@ class ApiClient {
   // Onboarding API
   // ============================================
 
-  async getOnboardingQuestions(): Promise<OnboardingSection[]> {
-    return this.get<OnboardingSection[]>("/onboarding/questions");
+  async getOnboardingQuestions(): Promise<OnboardingQuestionsResponse> {
+    return this.get<OnboardingQuestionsResponse>("/onboarding/questions");
   }
 
   async submitOnboardingResponses(

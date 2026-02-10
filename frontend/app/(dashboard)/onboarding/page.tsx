@@ -22,10 +22,11 @@ export default function OnboardingPage() {
   const [showWelcome, setShowWelcome] = useState(false);
 
   // Fetch questions
-  const { data: sections, isLoading } = useQuery({
+  const { data: questionsData, isLoading } = useQuery({
     queryKey: ["onboarding-questions"],
     queryFn: () => api.getOnboardingQuestions(),
   });
+  const sections = questionsData?.sections;
 
   // Fetch welcome message (after completion)
   const { data: welcome } = useQuery({

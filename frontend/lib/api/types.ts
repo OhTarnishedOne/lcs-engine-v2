@@ -60,6 +60,11 @@ export interface OnboardingSection {
   questions: OnboardingQuestion[];
 }
 
+export interface OnboardingQuestionsResponse {
+  sections: OnboardingSection[];
+  total_questions: number;
+}
+
 export interface OnboardingProgress {
   section: string;
   progress: number;
