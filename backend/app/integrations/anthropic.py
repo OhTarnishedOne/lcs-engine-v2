@@ -209,6 +209,7 @@ Title:"""
     ) -> dict:
         """
         Chat expecting JSON response. Used by strategy engine.
+        Retries once if JSON is malformed.
 
         Args:
             messages: List of message dicts
@@ -221,11 +222,28 @@ Title:"""
         import json
 
         response = await self.chat(messages, system_prompt, max_tokens)
+        cleaned = self._clean_json_response(response)
+
+        try:
+            return json.loads(cleaned)
+        except json.JSONDecodeError:
+            # Retry once with stronger instruction
+            logger.warning("JSON parse failed, retrying with stronger instruction")
+            retry_messages = messages + [
+                {"role": "assistant", "content": response},
+                {"role": "user", "content": "That was not valid JSON. Please respond with ONLY valid JSON, no other text."}
+            ]
+            retry_response = await self.chat(retry_messages, system_prompt, max_tokens)
+            cleaned = self._clean_json_response(retry_response)
+            return json.loads(cleaned)
+
+    def _clean_json_response(self, response: str) -> str:
+        """Clean up JSON response by removing markdown code blocks."""
         cleaned = response.strip()
-
-        # Handle markdown code blocks
         if cleaned.startswith("```"):
-            cleaned = cleaned.split("\n", 1)[1]
-            cleaned = cleaned.rsplit("```", 1)[0]
-
-        return json.loads(cleaned)
+            # Remove opening fence (possibly with language identifier)
+            cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+            # Remove closing fence
+            if "```" in cleaned:
+                cleaned = cleaned.rsplit("```", 1)[0]
+        return cleaned.strip()
