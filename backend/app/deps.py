@@ -1,4 +1,4 @@
-from typing import Generator
+from typing import Generator, Optional
 
 from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -8,7 +8,14 @@ from .database import SessionLocal
 from .auth.utils import verify_token
 from .common.errors import UnauthorizedError
 from .db.models import User
-from .integrations import AnthropicClient, OpenAIFallbackClient, ResilientAIClient
+from .integrations import (
+    AnthropicClient,
+    OpenAIFallbackClient,
+    ResilientAIClient,
+    AlpacaClient,
+    PolygonClient,
+    KalshiClient,
+)
 from .settings import get_settings
 
 security = HTTPBearer()
@@ -66,3 +73,26 @@ def get_ai_client() -> ResilientAIClient:
         anthropic_client=anthropic,
         openai_client=openai_fallback,
     )
+
+
+def get_alpaca_client() -> Optional[AlpacaClient]:
+    """Get the Alpaca paper trading client (if configured)."""
+    if not settings.alpaca_api_key or not settings.alpaca_secret_key:
+        return None
+    return AlpacaClient(
+        api_key=settings.alpaca_api_key,
+        secret_key=settings.alpaca_secret_key,
+        base_url=settings.alpaca_base_url,
+    )
+
+
+def get_polygon_client() -> Optional[PolygonClient]:
+    """Get the Polygon market data client (if configured)."""
+    if not settings.polygon_api_key:
+        return None
+    return PolygonClient(api_key=settings.polygon_api_key)
+
+
+def get_kalshi_client() -> KalshiClient:
+    """Get the Kalshi prediction markets client."""
+    return KalshiClient(api_key=settings.kalshi_api_key)

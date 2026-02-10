@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     alpaca_secret_key: str = ""
     alpaca_base_url: str = "https://paper-api.alpaca.markets"
     polygon_api_key: str = ""
+    kalshi_api_key: Optional[str] = None
 
     # App settings
     log_level: str = "INFO"
