@@ -9,7 +9,7 @@ import { Check, ChevronRight, Sparkles, ArrowRight } from "lucide-react";
 import { api } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { SkeletonCard } from "@/components/shared";
-import type { OnboardingSection, OnboardingQuestion } from "@/lib/api/types";
+import type { OnboardingSection } from "@/lib/api/types";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -26,7 +26,9 @@ export default function OnboardingPage() {
     queryKey: ["onboarding-questions"],
     queryFn: () => api.getOnboardingQuestions(),
   });
-  const sections = questionsData?.sections;
+  const sections: OnboardingSection[] | undefined = Array.isArray(questionsData?.sections)
+    ? questionsData.sections
+    : undefined;
 
   // Fetch welcome message (after completion)
   const { data: welcome } = useQuery({
@@ -37,7 +39,7 @@ export default function OnboardingPage() {
 
   // Submit section responses
   const submitMutation = useMutation({
-    mutationFn: ({ section, responses }: { section: string; responses: Record<string, string> }) =>
+    mutationFn: ({ section, responses }: { section: number; responses: Record<string, string> }) =>
       api.submitOnboardingResponses(section, responses),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["onboarding-progress"] });
@@ -67,22 +69,33 @@ export default function OnboardingPage() {
   const answeredQuestions = sections?.slice(0, currentSectionIndex).reduce((acc, s) => acc + s.questions.length, 0) || 0;
   const progress = totalQuestions > 0 ? (answeredQuestions + currentQuestionIndex) / totalQuestions : 0;
 
+  const advanceQuestion = (questionId: string, value: string) => {
+    if (currentSection && currentQuestionIndex < currentSection.questions.length - 1) {
+      setCurrentQuestionIndex((prev) => prev + 1);
+    } else if (currentSection) {
+      // Submit section
+      submitMutation.mutate({
+        section: currentSection.section,
+        responses: { ...sectionResponses, [questionId]: value },
+      });
+    }
+  };
+
   const handleSelectOption = (questionId: string, value: string) => {
     setSectionResponses((prev) => ({ ...prev, [questionId]: value }));
     setResponses((prev) => ({ ...prev, [questionId]: value }));
 
     // Auto-advance after a short delay
-    setTimeout(() => {
-      if (currentSection && currentQuestionIndex < currentSection.questions.length - 1) {
-        setCurrentQuestionIndex((prev) => prev + 1);
-      } else if (currentSection) {
-        // Submit section
-        submitMutation.mutate({
-          section: currentSection.id,
-          responses: { ...sectionResponses, [questionId]: value },
-        });
-      }
-    }, 300);
+    setTimeout(() => advanceQuestion(questionId, value), 300);
+  };
+
+  const handleTextSubmit = () => {
+    if (!currentQuestion) return;
+    const value = (sectionResponses[currentQuestion.key] || "").trim();
+    if (currentQuestion.required && !value) return;
+    setSectionResponses((prev) => ({ ...prev, [currentQuestion.key]: value }));
+    setResponses((prev) => ({ ...prev, [currentQuestion.key]: value }));
+    advanceQuestion(currentQuestion.key, value);
   };
 
   if (isLoading) {
@@ -197,7 +210,7 @@ export default function OnboardingPage() {
         <div className="mt-4 flex justify-center gap-2">
           {sections?.map((section, i) => (
             <div
-              key={section.id}
+              key={section.section}
               className={`h-2 w-8 rounded-full transition-colors ${
                 i < currentSectionIndex
                   ? "bg-[#00D4AA]"
@@ -212,19 +225,19 @@ export default function OnboardingPage() {
 
       {/* Section title */}
       <motion.div
-        key={currentSection.id}
+        key={currentSection.section}
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         className="mb-6 text-center"
       >
         <h2 className="text-xl font-semibold text-white">{currentSection.title}</h2>
-        <p className="mt-1 text-sm text-gray-400">{currentSection.description}</p>
+        <p className="mt-1 text-sm text-gray-400">{currentSection.subtitle}</p>
       </motion.div>
 
       {/* Question */}
       <AnimatePresence mode="wait">
         <motion.div
-          key={currentQuestion.id}
+          key={currentQuestion.key}
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
@@ -235,49 +248,86 @@ export default function OnboardingPage() {
             {currentQuestion.text}
           </h3>
 
-          <div className="space-y-3">
-            {currentQuestion.options.map((option) => {
-              const isSelected = sectionResponses[currentQuestion.id] === option.value;
-              return (
-                <motion.button
-                  key={option.value}
-                  onClick={() => handleSelectOption(currentQuestion.id, option.value)}
-                  className={`w-full rounded-lg border p-4 text-left transition-all ${
-                    isSelected
-                      ? "border-[#00D4AA] bg-[#00D4AA]/10 shadow-[0_0_20px_rgba(0,212,170,0.15)]"
-                      : "border-gray-700 bg-[#1A2942]/30 hover:border-gray-600 hover:bg-[#1A2942]/50"
-                  }`}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className={`font-medium ${isSelected ? "text-[#00D4AA]" : "text-gray-200"}`}>
-                        {option.label}
-                      </p>
-                      {option.description && (
-                        <p className="mt-1 text-sm text-gray-500">{option.description}</p>
+          {currentQuestion.options && currentQuestion.options.length > 0 ? (
+            <div className="space-y-3">
+              {currentQuestion.options.map((option) => {
+                const isSelected = sectionResponses[currentQuestion.key] === option.value;
+                return (
+                  <motion.button
+                    key={option.value}
+                    onClick={() => handleSelectOption(currentQuestion.key, option.value)}
+                    className={`w-full rounded-lg border p-4 text-left transition-all ${
+                      isSelected
+                        ? "border-[#00D4AA] bg-[#00D4AA]/10 shadow-[0_0_20px_rgba(0,212,170,0.15)]"
+                        : "border-gray-700 bg-[#1A2942]/30 hover:border-gray-600 hover:bg-[#1A2942]/50"
+                    }`}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className={`font-medium ${isSelected ? "text-[#00D4AA]" : "text-gray-200"}`}>
+                          {option.label}
+                        </p>
+                        {option.emoji && (
+                          <span className="mt-1 text-sm">{option.emoji}</span>
+                        )}
+                      </div>
+                      {isSelected && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="flex h-5 w-5 items-center justify-center rounded-full bg-[#00D4AA]"
+                        >
+                          <Check className="h-3 w-3 text-[#0A1628]" />
+                        </motion.div>
                       )}
                     </div>
-                    {isSelected && (
-                      <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="flex h-5 w-5 items-center justify-center rounded-full bg-[#00D4AA]"
-                      >
-                        <Check className="h-3 w-3 text-[#0A1628]" />
-                      </motion.div>
-                    )}
-                  </div>
-                </motion.button>
-              );
-            })}
-          </div>
+                  </motion.button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <textarea
+                value={sectionResponses[currentQuestion.key] || ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setSectionResponses((prev) => ({ ...prev, [currentQuestion.key]: v }));
+                  setResponses((prev) => ({ ...prev, [currentQuestion.key]: v }));
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleTextSubmit();
+                  }
+                }}
+                placeholder={currentQuestion.placeholder || "Type your answer..."}
+                rows={3}
+                className="w-full resize-none rounded-lg border border-gray-700 bg-[#1A2942]/30 p-4 text-gray-200 placeholder-gray-500 outline-none transition-colors focus:border-[#00D4AA] focus:ring-1 focus:ring-[#00D4AA]"
+              />
+              <div className="flex items-center justify-between">
+                {!currentQuestion.required && (
+                  <span className="text-xs text-gray-500">Optional</span>
+                )}
+                <Button
+                  onClick={handleTextSubmit}
+                  disabled={currentQuestion.required && !(sectionResponses[currentQuestion.key] || "").trim()}
+                  className="ml-auto bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0] btn-accent-glow disabled:opacity-50"
+                >
+                  Continue
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </motion.div>
       </AnimatePresence>
 
       {/* Navigation hint */}
       <p className="mt-4 text-center text-xs text-gray-500">
-        Select an option to continue
+        {currentQuestion.options && currentQuestion.options.length > 0
+          ? "Select an option to continue"
+          : "Press Enter or click Continue"}
       </p>
     </div>
   );

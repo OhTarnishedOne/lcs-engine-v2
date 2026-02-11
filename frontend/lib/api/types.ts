@@ -42,21 +42,26 @@ export interface UserProfile {
 
 // Onboarding
 export interface OnboardingQuestion {
-  id: string;
+  key: string;
   text: string;
+  type: string;
+  required: boolean;
+  order: number;
   options: OnboardingOption[];
+  placeholder: string | null;
+  conditional: Record<string, unknown> | null;
 }
 
 export interface OnboardingOption {
   value: string;
   label: string;
-  description?: string;
+  emoji?: string;
 }
 
 export interface OnboardingSection {
-  id: string;
+  section: number;
   title: string;
-  description: string;
+  subtitle: string;
   questions: OnboardingQuestion[];
 }
 
@@ -65,11 +70,20 @@ export interface OnboardingQuestionsResponse {
   total_questions: number;
 }
 
-export interface OnboardingProgress {
-  section: string;
-  progress: number;
+export interface OnboardingSubmitResult {
+  section: number;
+  saved_count: number;
   is_complete: boolean;
-  next_section: string | null;
+  next_section: number | null;
+}
+
+export interface OnboardingProgress {
+  sections_completed: number[];
+  current_section: number | null;
+  questions_answered: number;
+  total_questions: number;
+  percent_complete: number;
+  is_complete: boolean;
 }
 
 export interface OnboardingWelcome {

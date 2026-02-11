@@ -5,8 +5,8 @@
 
 import type {
   AuthResponse,
-  OnboardingSection,
   OnboardingQuestionsResponse,
+  OnboardingSubmitResult,
   OnboardingProgress,
   UserProfile,
   OnboardingWelcome,
@@ -223,10 +223,10 @@ class ApiClient {
   }
 
   async submitOnboardingResponses(
-    section: string,
+    section: number,
     responses: Record<string, string>
-  ): Promise<OnboardingProgress> {
-    return this.post<OnboardingProgress>("/onboarding/responses", {
+  ): Promise<OnboardingSubmitResult> {
+    return this.post<OnboardingSubmitResult>("/onboarding/responses", {
       section,
       responses,
     });

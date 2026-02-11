@@ -132,12 +132,12 @@ export default function DashboardPage() {
                         <div
                           className="h-full bg-[#00D4AA] transition-all"
                           style={{
-                            width: `${(progress?.progress ?? 0) * 100}%`,
+                            width: `${progress?.percent_complete ?? 0}%`,
                           }}
                         />
                       </div>
                       <span className="text-xs text-gray-500">
-                        {Math.round((progress?.progress ?? 0) * 100)}% complete
+                        {progress?.percent_complete ?? 0}% complete
                       </span>
                     </div>
                   </div>
