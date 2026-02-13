@@ -64,6 +64,10 @@ class UserProfile(Base):
     # AI-assigned: "cautious_beginner", "eager_learner", "goal_focused", etc.
     persona_description: Mapped[Optional[str]] = mapped_column(Text)
 
+    # === Progress Tracking ===
+    current_section: Mapped[int] = mapped_column(Integer, default=1)
+    recommended_path: Mapped[Optional[str]] = mapped_column(String(50))
+
     # === Status ===
     onboarding_completed: Mapped[bool] = mapped_column(Boolean, default=False)
     onboarding_completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))

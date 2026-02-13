@@ -52,6 +52,10 @@ class SaveSingleResponseRequest(BaseModel):
     answer_value: Any
 
 
+class SaveSectionPathRequest(BaseModel):
+    responses: dict[str, Any]  # {question_key: answer_value}
+
+
 class CompleteOnboardingRequest(BaseModel):
     responses: dict[str, Any]  # All responses if submitting at once
 
@@ -108,6 +112,7 @@ class UserProfileResponse(BaseModel):
     # Computed
     persona: Optional[str] = None
     persona_description: Optional[str] = None
+    recommended_path: Optional[str] = None
 
     # Status
     onboarding_completed: bool = False

@@ -35,6 +35,7 @@ export interface UserProfile {
   primary_goal: string | null;
   risk_tolerance: string | null;
   learning_preference: string | null;
+  recommended_path: string | null;
   onboarding_completed: boolean;
   created_at: string;
   updated_at: string;

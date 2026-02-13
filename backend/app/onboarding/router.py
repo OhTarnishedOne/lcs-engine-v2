@@ -25,6 +25,7 @@ from .schemas import (
     SaveResponsesRequest,
     SaveResponsesResponse,
     SaveSingleResponseRequest,
+    SaveSectionPathRequest,
     CompleteOnboardingRequest,
     UserProfileResponse,
     OnboardingProgressResponse,
@@ -96,6 +97,27 @@ def save_responses(
     )
 
 
+@router.post("/sections/{section_number}", response_model=SaveResponsesResponse)
+def save_section_responses(
+    section_number: int,
+    request: SaveSectionPathRequest,
+    current_user: User = Depends(get_current_user),
+    service: OnboardingService = Depends(get_onboarding_service)
+) -> SaveResponsesResponse:
+    """Save responses for a section using path parameter."""
+    saved_count, next_section = service.save_section(
+        user_id=current_user.id,
+        section=section_number,
+        responses=request.responses
+    )
+    return SaveResponsesResponse(
+        section=section_number,
+        saved_count=saved_count,
+        next_section=next_section,
+        is_complete=(next_section is None)
+    )
+
+
 @router.post("/response", response_model=dict)
 def save_single_response(
     request: SaveSingleResponseRequest,
@@ -151,6 +173,7 @@ def complete_onboarding(
         interests=profile.interests,
         persona=profile.persona,
         persona_description=profile.persona_description,
+        recommended_path=profile.recommended_path,
         onboarding_completed=profile.onboarding_completed,
         onboarding_completed_at=profile.onboarding_completed_at
     )
@@ -196,6 +219,7 @@ def get_profile(
         interests=profile.interests,
         persona=profile.persona,
         persona_description=profile.persona_description,
+        recommended_path=profile.recommended_path,
         onboarding_completed=profile.onboarding_completed,
         onboarding_completed_at=profile.onboarding_completed_at
     )

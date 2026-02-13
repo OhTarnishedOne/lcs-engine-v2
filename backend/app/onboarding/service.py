@@ -171,6 +171,16 @@ class OnboardingService:
         # Determine next section
         next_section = section + 1 if section < 5 else None
 
+        # Update current_section on user profile
+        profile = self.db.query(UserProfile).filter(
+            UserProfile.user_id == user_id
+        ).first()
+        if not profile:
+            profile = UserProfile(user_id=user_id)
+            self.db.add(profile)
+        profile.current_section = next_section if next_section else section
+        self.db.commit()
+
         return saved_count, next_section
 
     def complete_onboarding(
@@ -254,37 +264,58 @@ class OnboardingService:
 
         return profile
 
+    # Mapping from persona to recommended learning path
+    PERSONA_PATH_MAP = {
+        "cautious_beginner": "start_with_basics",
+        "eager_learner": "accelerated_learning",
+        "wealth_builder": "investment_strategies",
+        "income_seeker": "retirement_planning",
+        "goal_focused": "goal_oriented_path",
+    }
+
     def _generate_persona(self, profile: UserProfile) -> tuple[str, str]:
         """
         Generate a persona based on profile.
-        Uses rule-based logic. Can be enhanced with Claude later.
+        Uses rule-based logic with priority ordering.
+        Also sets recommended_path on the profile.
         """
-        # Analyze key factors
-        is_beginner = profile.experience_level in ("never", "curious")
-        is_risk_averse = profile.risk_tolerance in ("very_conservative", "conservative")
-        has_specific_goal = profile.primary_goal == "specific_goal"
-        is_skeptical = "dont_trust_markets" in (profile.barriers or [])
-        has_bad_experience = "bad_experience" in (profile.barriers or [])
-        is_time_pressed = profile.time_commitment in ("5_min_daily", "30_min_weekly")
-        wants_hands_on = profile.learning_preference == "do"
+        exp = profile.experience_level
+        barrier = profile.biggest_barrier
+        goal = profile.primary_goal
+        risk = profile.risk_tolerance
+        horizon = profile.time_horizon
 
-        # Determine persona
-        if has_bad_experience:
-            persona = "rebuilding_confidence"
-        elif is_beginner and is_risk_averse:
+        # Priority-ordered rules
+        if (
+            exp in ("never", "curious")
+            and barrier in ("fear_of_losing_money", "dont_know_where_to_start")
+        ):
             persona = "cautious_beginner"
-        elif is_skeptical:
-            persona = "skeptical_explorer"
-        elif has_specific_goal:
-            persona = "goal_focused"
-        elif is_time_pressed:
-            persona = "time_pressed"
-        elif wants_hands_on or not is_beginner:
+        elif (
+            exp in ("beginner", "curious")
+            and goal == "learn_basics"
+            and risk in ("moderate", "aggressive")
+        ):
             persona = "eager_learner"
+        elif (
+            goal == "grow_wealth"
+            and risk in ("aggressive", "very_aggressive")
+        ):
+            persona = "wealth_builder"
+        elif (
+            (goal == "retirement" or horizon in ("5_to_10_years", "10_plus_years"))
+            and risk in ("very_conservative", "conservative", "moderate")
+        ):
+            persona = "income_seeker"
+        elif goal == "specific_goal":
+            persona = "goal_focused"
         else:
-            persona = "cautious_beginner"
+            persona = "eager_learner"
 
-        persona_info = PERSONA_DEFINITIONS.get(persona, PERSONA_DEFINITIONS["cautious_beginner"])
+        # Set recommended_path based on persona
+        profile.recommended_path = self.PERSONA_PATH_MAP.get(persona, "accelerated_learning")
+
+        persona_info = PERSONA_DEFINITIONS.get(persona, PERSONA_DEFINITIONS["eager_learner"])
         return persona, persona_info["description"]
 
     def get_profile(self, user_id: str) -> Optional[UserProfile]:

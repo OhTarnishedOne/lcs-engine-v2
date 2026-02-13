@@ -20,6 +20,7 @@ export default function OnboardingPage() {
   const [responses, setResponses] = useState<Record<string, string>>({});
   const [sectionResponses, setSectionResponses] = useState<Record<string, string>>({});
   const [showWelcome, setShowWelcome] = useState(false);
+  const [hasResumed, setHasResumed] = useState(false);
 
   // Fetch questions
   const { data: questionsData, isLoading } = useQuery({
@@ -29,6 +30,29 @@ export default function OnboardingPage() {
   const sections: OnboardingSection[] | undefined = Array.isArray(questionsData?.sections)
     ? questionsData.sections
     : undefined;
+
+  // Fetch onboarding progress for resumption
+  const { data: progressData } = useQuery({
+    queryKey: ["onboarding-progress"],
+    queryFn: () => api.getOnboardingProgress(),
+  });
+
+  // Resume progress on page load
+  useEffect(() => {
+    if (!progressData || !sections || hasResumed) return;
+    setHasResumed(true);
+    if (progressData.is_complete) {
+      setShowWelcome(true);
+      return;
+    }
+    if (progressData.current_section) {
+      const idx = sections.findIndex((s) => s.section === progressData.current_section);
+      if (idx >= 0) {
+        setCurrentSectionIndex(idx);
+        setCurrentQuestionIndex(0);
+      }
+    }
+  }, [progressData, sections, hasResumed]);
 
   // Fetch welcome message (after completion)
   const { data: welcome } = useQuery({
@@ -40,7 +64,7 @@ export default function OnboardingPage() {
   // Submit section responses
   const submitMutation = useMutation({
     mutationFn: ({ section, responses }: { section: number; responses: Record<string, string> }) =>
-      api.submitOnboardingResponses(section, responses),
+      api.submitSectionResponses(section, responses),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["onboarding-progress"] });
       if (data.is_complete) {

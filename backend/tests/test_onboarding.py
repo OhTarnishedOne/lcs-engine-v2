@@ -280,7 +280,7 @@ def test_personalized_welcome(client):
 
 
 def test_persona_generation_cautious_beginner(client):
-    """Test persona generation for risk-averse beginner."""
+    """Test persona generation for beginner with fear barrier."""
     reg_response = client.post(
         "/api/auth/register",
         json={"email": "test@example.com", "password": "testpass123"},
@@ -297,8 +297,9 @@ def test_persona_generation_cautious_beginner(client):
                 "has_investment_account": False,
                 "has_retirement_account": False,
                 "barriers": ["fear_of_losing_money"],
+                "biggest_barrier": "fear_of_losing_money",
                 "primary_goal": "learn_basics",
-                "time_horizon": "10_plus_years",
+                "time_horizon": "3_to_5_years",
                 "risk_tolerance": "very_conservative",
                 "loss_reaction": "sell_immediately",
                 "monthly_investable": "nothing_yet",
@@ -311,10 +312,46 @@ def test_persona_generation_cautious_beginner(client):
     assert response.status_code == 200
     data = response.json()
     assert data["persona"] == "cautious_beginner"
+    assert data["recommended_path"] == "start_with_basics"
 
 
 def test_persona_generation_eager_learner(client):
-    """Test persona generation for hands-on learner."""
+    """Test persona generation for curious learner with moderate risk."""
+    reg_response = client.post(
+        "/api/auth/register",
+        json={"email": "test@example.com", "password": "testpass123"},
+    )
+    token = reg_response.json()["access_token"]
+
+    response = client.post(
+        "/api/onboarding/complete",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "responses": {
+                "experience_level": "beginner",
+                "current_situation": "early_career",
+                "has_investment_account": True,
+                "has_retirement_account": True,
+                "barriers": ["none"],
+                "primary_goal": "learn_basics",
+                "time_horizon": "3_to_5_years",
+                "risk_tolerance": "moderate",
+                "loss_reaction": "wait_and_see",
+                "monthly_investable": "100_to_500",
+                "learning_preference": "do",
+                "time_commitment": "1_hour_weekly",
+                "interests": ["all"]
+            }
+        }
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["persona"] == "eager_learner"
+    assert data["recommended_path"] == "accelerated_learning"
+
+
+def test_persona_generation_wealth_builder(client):
+    """Test persona generation for growth-oriented aggressive investor."""
     reg_response = client.post(
         "/api/auth/register",
         json={"email": "test@example.com", "password": "testpass123"},
@@ -344,7 +381,43 @@ def test_persona_generation_eager_learner(client):
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["persona"] == "eager_learner"
+    assert data["persona"] == "wealth_builder"
+    assert data["recommended_path"] == "investment_strategies"
+
+
+def test_persona_generation_income_seeker(client):
+    """Test persona generation for conservative retirement-focused user."""
+    reg_response = client.post(
+        "/api/auth/register",
+        json={"email": "test@example.com", "password": "testpass123"},
+    )
+    token = reg_response.json()["access_token"]
+
+    response = client.post(
+        "/api/onboarding/complete",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "responses": {
+                "experience_level": "intermediate",
+                "current_situation": "mid_career",
+                "has_investment_account": True,
+                "has_retirement_account": True,
+                "barriers": ["none"],
+                "primary_goal": "retirement",
+                "time_horizon": "10_plus_years",
+                "risk_tolerance": "moderate",
+                "loss_reaction": "wait_and_see",
+                "monthly_investable": "500_to_1000",
+                "learning_preference": "read",
+                "time_commitment": "30_min_weekly",
+                "interests": ["retirement", "bonds"]
+            }
+        }
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["persona"] == "income_seeker"
+    assert data["recommended_path"] == "retirement_planning"
 
 
 def test_onboarding_progress_after_complete(client):

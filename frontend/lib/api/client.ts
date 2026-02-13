@@ -232,6 +232,15 @@ class ApiClient {
     });
   }
 
+  async submitSectionResponses(
+    sectionNumber: number,
+    responses: Record<string, string>
+  ): Promise<OnboardingSubmitResult> {
+    return this.post<OnboardingSubmitResult>(`/onboarding/sections/${sectionNumber}`, {
+      responses,
+    });
+  }
+
   async completeOnboarding(): Promise<{ message: string; profile: UserProfile }> {
     return this.post("/onboarding/complete");
   }

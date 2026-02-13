@@ -315,6 +315,16 @@ PERSONA_DEFINITIONS: dict[str, dict[str, str]] = {
         "name": "Rebuilding Confidence",
         "description": "Had a bad experience. Needs a safe space to try again.",
         "approach": "Be gentle, go slow, emphasize paper trading and simulation."
+    },
+    "wealth_builder": {
+        "name": "Wealth Builder",
+        "description": "Growth-oriented and comfortable with risk. Wants to maximize returns.",
+        "approach": "Show advanced strategies, discuss diversification, and highlight compounding."
+    },
+    "income_seeker": {
+        "name": "Income Seeker",
+        "description": "Focused on long-term stability and income generation.",
+        "approach": "Emphasize retirement accounts, bonds, dividend strategies, and steady growth."
     }
 }
 
