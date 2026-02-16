@@ -139,7 +139,7 @@ export default function ProbabilityLabPage() {
     calibration.calibration_curve.forEach((bucket) => {
       const index = Math.floor(bucket.predicted_avg * 10);
       if (index >= 0 && index < calibrationData.length) {
-        calibrationData[index].actual = bucket.actual_pct * 100;
+        calibrationData[index].actual = bucket.actual_rate * 100;
       }
     });
   }
@@ -356,12 +356,13 @@ export default function ProbabilityLabPage() {
                     className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4"
                   >
                     <h4 className="mb-1 font-medium text-amber-400 capitalize">
-                      {bias.bias_type.replace(/_/g, " ")}
+                      {bias.name.replace(/_/g, " ")}
                     </h4>
                     <p className="mb-2 text-sm text-gray-300">{bias.description}</p>
+                    <p className="mb-1 text-xs text-gray-400">{bias.tip}</p>
                     <p className="text-xs text-gray-500">
-                      <span className="text-amber-400">Investing impact:</span>{" "}
-                      {bias.investing_impact}
+                      <span className="text-amber-400">Investing connection:</span>{" "}
+                      {bias.investing_connection}
                     </p>
                   </div>
                 ))}

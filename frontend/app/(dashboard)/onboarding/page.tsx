@@ -164,19 +164,28 @@ export default function OnboardingPage() {
             transition={{ delay: 0.3 }}
             className="mb-2 text-2xl font-bold text-white"
           >
-            Welcome, {welcome?.name || "Learner"}!
+            {welcome?.greeting || "Welcome! We're glad you're here."}
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="mb-6 text-gray-400"
+            className="mb-2 text-gray-300"
           >
-            {welcome?.welcome_message || "Your personalized learning journey begins now."}
+            {welcome?.acknowledgment || ""}
           </motion.p>
 
-          {welcome?.suggested_first_steps && welcome.suggested_first_steps.length > 0 && (
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45 }}
+            className="mb-6 text-gray-400"
+          >
+            {welcome?.encouragement || "Your personalized learning journey begins now."}
+          </motion.p>
+
+          {welcome?.personalized_tips && welcome.personalized_tips.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -184,16 +193,35 @@ export default function OnboardingPage() {
               className="mb-6 rounded-lg bg-[#1A2942]/50 p-4 text-left"
             >
               <p className="mb-3 text-sm font-medium text-gray-300">
-                Suggested first steps:
+                Personalized tips for you:
               </p>
-              <ul className="space-y-2">
-                {welcome.suggested_first_steps.map((step, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-gray-400">
-                    <Check className="mt-0.5 h-4 w-4 text-[#00D4AA]" />
-                    {step}
+              <ul className="space-y-3">
+                {welcome.personalized_tips.map((tip, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#00D4AA]" />
+                    <div>
+                      <p className="font-medium text-gray-200">{tip.title}</p>
+                      <p className="text-gray-400">{tip.description}</p>
+                    </div>
                   </li>
                 ))}
               </ul>
+            </motion.div>
+          )}
+
+          {welcome?.recommended_action_label && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.55 }}
+              className="mb-6 rounded-lg border border-[#00D4AA]/20 bg-[#00D4AA]/5 p-4"
+            >
+              <p className="text-sm font-medium text-[#00D4AA]">
+                {welcome.recommended_action_label}
+              </p>
+              <p className="mt-1 text-sm text-gray-400">
+                {welcome.recommended_action_description}
+              </p>
             </motion.div>
           )}
 

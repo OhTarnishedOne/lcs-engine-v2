@@ -118,10 +118,10 @@ export default function StrategiesPage() {
     }
   };
 
-  const getChartData = (allocation: Record<string, number>) => {
-    return Object.entries(allocation).map(([name, value]) => ({
-      name,
-      value: Math.round(value * 100),
+  const getChartData = (strategy: Strategy) => {
+    return (strategy.assets || []).map((asset) => ({
+      name: `${asset.ticker} - ${asset.name}`,
+      value: Math.round(asset.allocation_pct),
     }));
   };
 
@@ -233,15 +233,9 @@ export default function StrategiesPage() {
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <p className="mb-4 text-sm text-gray-300 whitespace-pre-wrap">
-              {compareMutation.data.comparison}
+            <p className="text-sm text-gray-300 whitespace-pre-wrap">
+              {compareMutation.data.comparison_text}
             </p>
-            <div className="rounded-lg bg-[#1A2942]/50 p-4">
-              <p className="text-sm font-medium text-[#00D4AA]">Recommendation</p>
-              <p className="mt-1 text-sm text-gray-300">
-                {compareMutation.data.recommendation}
-              </p>
-            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -381,12 +375,10 @@ function StrategyCard({
   onExplain,
   chartColors,
 }: StrategyCardProps) {
-  const chartData = Object.entries(strategy.asset_allocation).map(
-    ([name, value]) => ({
-      name,
-      value: Math.round(value * 100),
-    })
-  );
+  const chartData = (strategy.assets || []).map((asset) => ({
+    name: `${asset.ticker} - ${asset.name}`,
+    value: Math.round(asset.allocation_pct),
+  }));
 
   const typeColor =
     STRATEGY_COLORS[strategy.strategy_type.toLowerCase()] ||
@@ -528,13 +520,13 @@ function StrategyCard({
                 <p className="text-sm text-gray-400">{strategy.rationale}</p>
               </div>
 
-              {/* Risk Assessment */}
+              {/* Risks */}
               <div>
                 <h4 className="mb-2 text-sm font-medium text-gray-300">
-                  Risk Assessment
+                  Risks
                 </h4>
                 <p className="text-sm text-gray-400">
-                  {strategy.risk_assessment}
+                  {strategy.risks}
                 </p>
               </div>
 

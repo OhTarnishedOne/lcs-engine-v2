@@ -90,7 +90,7 @@ export default function PaperTradePage() {
     },
   });
 
-  const positions = positionsData?.positions || [];
+  const positions = positionsData || [];
 
   const formatCurrency = (value: number | null | undefined) => {
     if (value === null || value === undefined) return "$0.00";
@@ -224,14 +224,14 @@ export default function PaperTradePage() {
           icon={ShoppingCart}
         />
         <StatCard
-          label="Day P&L"
-          value={formatCurrency(portfolio?.day_pl)}
+          label="Total P&L"
+          value={formatCurrency(portfolio?.total_pl)}
           valueClassName={
-            (portfolio?.day_pl ?? 0) >= 0 ? "text-[#10B981]" : "text-[#EF4444]"
+            (portfolio?.total_pl ?? 0) >= 0 ? "text-[#10B981]" : "text-[#EF4444]"
           }
           change={
-            portfolio?.day_pl_pct
-              ? { value: portfolio.day_pl_pct, isPositive: portfolio.day_pl_pct >= 0 }
+            portfolio?.total_pl_pct
+              ? { value: portfolio.total_pl_pct, isPositive: portfolio.total_pl_pct >= 0 }
               : undefined
           }
         />
@@ -263,20 +263,20 @@ export default function PaperTradePage() {
                 <div className="absolute left-0 right-0 top-full z-10 mt-1 max-h-48 overflow-y-auto rounded-lg border border-gray-700 bg-[#1F2937]">
                   {searchResults.map((result) => (
                     <button
-                      key={result.symbol}
-                      onClick={() => handleSelectSymbol(result.symbol)}
+                      key={result.ticker}
+                      onClick={() => handleSelectSymbol(result.ticker)}
                       className="flex w-full items-center justify-between px-4 py-2 text-left hover:bg-[#1A2942]"
                     >
                       <div>
                         <span className="font-mono text-white">
-                          {result.symbol}
+                          {result.ticker}
                         </span>
                         <span className="ml-2 text-sm text-gray-400">
                           {result.name}
                         </span>
                       </div>
                       <span className="text-xs text-gray-500">
-                        {result.exchange}
+                        {result.type}
                       </span>
                     </button>
                   ))}

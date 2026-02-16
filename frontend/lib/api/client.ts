@@ -20,11 +20,10 @@ import type {
   ExplainStrategyRequest,
   ExplainStrategyResponse,
   PortfolioResponse,
-  PositionsResponse,
+  Position,
   PlaceOrderRequest,
   Order,
-  OrdersResponse,
-  TradeHistoryResponse,
+  TradeHistory,
   SymbolSearchResult,
   Quote,
   CompanyInfo,
@@ -347,25 +346,25 @@ class ApiClient {
     return this.get<PortfolioResponse>("/trading/portfolio");
   }
 
-  async getPositions(): Promise<PositionsResponse> {
-    return this.get<PositionsResponse>("/trading/positions");
+  async getPositions(): Promise<Position[]> {
+    return this.get<Position[]>("/trading/positions");
   }
 
   async placeOrder(request: PlaceOrderRequest): Promise<Order> {
     return this.post<Order>("/trading/orders", request);
   }
 
-  async getOrders(status?: string): Promise<OrdersResponse> {
+  async getOrders(status?: string): Promise<Order[]> {
     const query = status ? `?status=${status}` : "";
-    return this.get<OrdersResponse>(`/trading/orders${query}`);
+    return this.get<Order[]>(`/trading/orders${query}`);
   }
 
   async cancelOrder(orderId: string): Promise<{ cancelled: boolean; order_id: string }> {
     return this.delete(`/trading/orders/${orderId}`);
   }
 
-  async getTradeHistory(): Promise<TradeHistoryResponse> {
-    return this.get<TradeHistoryResponse>("/trading/history");
+  async getTradeHistory(): Promise<TradeHistory[]> {
+    return this.get<TradeHistory[]>("/trading/history");
   }
 
   async searchSymbols(query: string): Promise<SymbolSearchResult[]> {

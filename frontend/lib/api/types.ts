@@ -87,12 +87,22 @@ export interface OnboardingProgress {
   is_complete: boolean;
 }
 
+export interface PersonalizedTip {
+  title: string;
+  description: string;
+  action?: string;
+}
+
 export interface OnboardingWelcome {
-  name: string;
-  persona: string;
-  welcome_message: string;
-  suggested_first_steps: string[];
-  learning_path_preview: string[];
+  greeting: string;
+  acknowledgment: string;
+  encouragement: string;
+  recommended_action: string;
+  recommended_action_label: string;
+  recommended_action_description: string;
+  personalized_tips: PersonalizedTip[];
+  persona: string | null;
+  persona_description: string | null;
 }
 
 // Chat
@@ -122,22 +132,30 @@ export interface ConversationsResponse {
 }
 
 // Strategies
+export interface AssetAllocation {
+  ticker: string;
+  name: string;
+  allocation_pct: number;
+  rationale: string;
+}
+
 export interface Strategy {
   id: string;
-  user_id: string;
   name: string;
+  description: string;
   strategy_type: string;
   risk_level: number;
-  description: string;
-  asset_allocation: Record<string, number>;
+  time_horizon: string;
+  assets: AssetAllocation[];
   rationale: string;
-  risk_assessment: string;
+  risks: string;
   learning_points: string[];
   created_at: string;
 }
 
 export interface GenerateStrategyRequest {
   strategy_type?: string;
+  preferences?: Record<string, unknown>;
 }
 
 export interface StrategiesResponse {
@@ -150,9 +168,10 @@ export interface CompareStrategiesRequest {
 }
 
 export interface StrategyComparison {
+  id: string;
   strategies: Strategy[];
-  comparison: string;
-  recommendation: string;
+  comparison_text: string;
+  created_at: string;
 }
 
 export interface ExplainStrategyRequest {
@@ -166,17 +185,6 @@ export interface ExplainStrategyResponse {
 }
 
 // Trading
-export interface PortfolioResponse {
-  equity: number;
-  cash: number;
-  buying_power: number;
-  portfolio_value: number;
-  day_pl: number;
-  day_pl_pct: number;
-  total_pl: number;
-  total_pl_pct: number;
-}
-
 export interface Position {
   symbol: string;
   qty: number;
@@ -185,12 +193,15 @@ export interface Position {
   market_value: number;
   unrealized_pl: number;
   unrealized_pl_pct: number;
-  side: string;
 }
 
-export interface PositionsResponse {
+export interface PortfolioResponse {
+  equity: number;
+  cash: number;
+  buying_power: number;
+  total_pl: number;
+  total_pl_pct: number;
   positions: Position[];
-  total: number;
 }
 
 export interface PlaceOrderRequest {
@@ -199,52 +210,40 @@ export interface PlaceOrderRequest {
   side: "buy" | "sell";
   order_type: "market" | "limit";
   limit_price?: number;
-  time_in_force?: string;
   strategy_id?: string;
-  notes?: string;
+  reasoning?: string;
 }
 
 export interface Order {
   id: string;
+  alpaca_order_id: string | null;
   symbol: string;
-  qty: number;
   side: string;
+  qty: number;
   order_type: string;
   status: string;
-  filled_avg_price: number | null;
-  filled_qty: number;
   limit_price: number | null;
+  filled_price: number | null;
   created_at: string;
-}
-
-export interface OrdersResponse {
-  orders: Order[];
-  total: number;
 }
 
 export interface TradeHistory {
   id: string;
   symbol: string;
-  qty: number;
   side: string;
+  qty: number;
   order_type: string;
-  filled_price: number | null;
   status: string;
+  filled_price: number | null;
   strategy_id: string | null;
-  notes: string | null;
+  reasoning: string | null;
   created_at: string;
 }
 
-export interface TradeHistoryResponse {
-  trades: TradeHistory[];
-  total: number;
-}
-
 export interface SymbolSearchResult {
-  symbol: string;
+  ticker: string;
   name: string;
   type: string;
-  exchange: string;
 }
 
 export interface Quote {
@@ -253,26 +252,29 @@ export interface Quote {
   change: number;
   change_pct: number;
   volume: number;
-  high: number;
-  low: number;
-  open: number;
-  prev_close: number;
+  timestamp: string;
 }
 
 export interface CompanyInfo {
-  symbol: string;
+  ticker: string;
   name: string;
-  description: string;
-  sector: string;
-  industry: string;
-  market_cap: number;
-  employees: number;
+  description: string | null;
+  sector: string | null;
+  industry: string | null;
+  market_cap: number | null;
+  homepage_url: string | null;
+}
+
+export interface PortfolioHistoryResponse {
+  timestamps: string[];
+  equity: number[];
+  profit_loss: number[];
+  profit_loss_pct: number[];
 }
 
 // Probability Lab
 export interface PredictionMarket {
   id: string;
-  external_id: string | null;
   title: string;
   description: string | null;
   category: string;
@@ -300,9 +302,11 @@ export interface UserPrediction {
   market_id: string;
   market_title: string;
   predicted_probability: number;
-  market_probability: number | null;
+  market_probability: number;
   reasoning: string | null;
   brier_score: number | null;
+  is_resolved: boolean;
+  resolution: string | null;
   created_at: string;
 }
 
@@ -312,16 +316,18 @@ export interface PredictionsResponse {
 }
 
 export interface CalibrationBucket {
-  bucket: string;
+  bucket_start: number;
+  bucket_end: number;
   predicted_avg: number;
-  actual_pct: number;
+  actual_rate: number;
   count: number;
 }
 
 export interface BiasInfo {
-  bias_type: string;
+  name: string;
   description: string;
-  investing_impact: string;
+  tip: string;
+  investing_connection: string;
 }
 
 export interface CalibrationResponse {
