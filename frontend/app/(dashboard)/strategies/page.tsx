@@ -118,13 +118,6 @@ export default function StrategiesPage() {
     }
   };
 
-  const getChartData = (strategy: Strategy) => {
-    return (strategy.assets || []).map((asset) => ({
-      name: `${asset.ticker} - ${asset.name}`,
-      value: Math.round(asset.allocation_pct),
-    }));
-  };
-
   if (isLoading) {
     return (
       <div className="mx-auto max-w-6xl space-y-6">
