@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,6 +21,7 @@ export default function OnboardingPage() {
   const [sectionResponses, setSectionResponses] = useState<Record<string, string>>({});
   const [showWelcome, setShowWelcome] = useState(false);
   const [hasResumed, setHasResumed] = useState(false);
+  const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch questions
   const { data: questionsData, isLoading } = useQuery({
@@ -106,11 +107,20 @@ export default function OnboardingPage() {
   };
 
   const handleSelectOption = (questionId: string, value: string) => {
+    // Cancel any pending advance so only the latest click takes effect
+    if (advanceTimerRef.current) {
+      clearTimeout(advanceTimerRef.current);
+    }
+
+    // Replace (not accumulate) the value for this question
     setSectionResponses((prev) => ({ ...prev, [questionId]: value }));
     setResponses((prev) => ({ ...prev, [questionId]: value }));
 
     // Auto-advance after a short delay
-    setTimeout(() => advanceQuestion(questionId, value), 300);
+    advanceTimerRef.current = setTimeout(() => {
+      advanceTimerRef.current = null;
+      advanceQuestion(questionId, value);
+    }, 300);
   };
 
   const handleTextSubmit = () => {
@@ -280,29 +290,29 @@ export default function OnboardingPage() {
                   <motion.button
                     key={option.value}
                     onClick={() => handleSelectOption(currentQuestion.key, option.value)}
-                    className={`w-full rounded-lg border p-4 text-left transition-all ${
+                    className={`w-full rounded-lg border px-5 py-4 text-left transition-all ${
                       isSelected
                         ? "border-[#00D4AA] bg-[#00D4AA]/10 shadow-[0_0_20px_rgba(0,212,170,0.15)]"
                         : "border-gray-700 bg-[#1A2942]/30 hover:border-gray-600 hover:bg-[#1A2942]/50"
                     }`}
                     whileTap={{ scale: 0.98 }}
                   >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className={`font-medium ${isSelected ? "text-[#00D4AA]" : "text-gray-200"}`}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        {option.emoji && (
+                          <span className="text-lg">{option.emoji}</span>
+                        )}
+                        <p className={`text-base font-medium ${isSelected ? "text-[#00D4AA]" : "text-gray-200"}`}>
                           {option.label}
                         </p>
-                        {option.emoji && (
-                          <span className="mt-1 text-sm">{option.emoji}</span>
-                        )}
                       </div>
                       {isSelected && (
                         <motion.div
                           initial={{ scale: 0 }}
                           animate={{ scale: 1 }}
-                          className="flex h-5 w-5 items-center justify-center rounded-full bg-[#00D4AA]"
+                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#00D4AA]"
                         >
-                          <Check className="h-3 w-3 text-[#0A1628]" />
+                          <Check className="h-3.5 w-3.5 text-[#0A1628]" />
                         </motion.div>
                       )}
                     </div>
