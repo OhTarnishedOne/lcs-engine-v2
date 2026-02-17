@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
+
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,9 +18,8 @@ export default function OnboardingPage() {
 
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [responses, setResponses] = useState<Record<string, string>>({});
   const [sectionResponses, setSectionResponses] = useState<Record<string, string>>({});
-  const [showWelcome, setShowWelcome] = useState(false);
+  const [completedNow, setCompletedNow] = useState(false);
   const [hasResumed, setHasResumed] = useState(false);
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -38,22 +38,20 @@ export default function OnboardingPage() {
     queryFn: () => api.getOnboardingProgress(),
   });
 
-  // Resume progress on page load
-  useEffect(() => {
-    if (!progressData || !sections || hasResumed) return;
+  // Derive showWelcome from progress data or just-completed state
+  const showWelcome = (progressData?.is_complete ?? false) || completedNow;
+
+  // Resume section index during render (React-recommended adjust-state-during-render pattern)
+  if (progressData && sections && !hasResumed) {
     setHasResumed(true);
-    if (progressData.is_complete) {
-      setShowWelcome(true);
-      return;
-    }
-    if (progressData.current_section) {
+    if (!progressData.is_complete && progressData.current_section) {
       const idx = sections.findIndex((s) => s.section === progressData.current_section);
       if (idx >= 0) {
         setCurrentSectionIndex(idx);
         setCurrentQuestionIndex(0);
       }
     }
-  }, [progressData, sections, hasResumed]);
+  }
 
   // Fetch welcome message (after completion)
   const { data: welcome } = useQuery({
@@ -84,7 +82,7 @@ export default function OnboardingPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       queryClient.invalidateQueries({ queryKey: ["onboarding-progress"] });
-      setShowWelcome(true);
+      setCompletedNow(true);
     },
   });
 
@@ -114,7 +112,6 @@ export default function OnboardingPage() {
 
     // Replace (not accumulate) the value for this question
     setSectionResponses((prev) => ({ ...prev, [questionId]: value }));
-    setResponses((prev) => ({ ...prev, [questionId]: value }));
 
     // Auto-advance after a short delay
     advanceTimerRef.current = setTimeout(() => {
@@ -128,7 +125,6 @@ export default function OnboardingPage() {
     const value = (sectionResponses[currentQuestion.key] || "").trim();
     if (currentQuestion.required && !value) return;
     setSectionResponses((prev) => ({ ...prev, [currentQuestion.key]: value }));
-    setResponses((prev) => ({ ...prev, [currentQuestion.key]: value }));
     advanceQuestion(currentQuestion.key, value);
   };
 
@@ -355,7 +351,6 @@ export default function OnboardingPage() {
                 onChange={(e) => {
                   const v = e.target.value;
                   setSectionResponses((prev) => ({ ...prev, [currentQuestion.key]: v }));
-                  setResponses((prev) => ({ ...prev, [currentQuestion.key]: v }));
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {

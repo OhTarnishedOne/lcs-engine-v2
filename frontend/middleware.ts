@@ -9,25 +9,8 @@ import type { NextRequest } from "next/server";
  * which verifies the token with the API.
  */
 
-// Routes that require authentication
-const protectedRoutes = [
-  "/dashboard",
-  "/onboarding",
-  "/strategies",
-  "/paper-trade",
-  "/probability-lab",
-  "/chat",
-  "/profile",
-];
-
-// Routes only for unauthenticated users
-const authRoutes = ["/login", "/register"];
-
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
-  // Check if user has a token (basic check - actual validation is client-side)
-  const token = request.cookies.get("access_token")?.value;
 
   // We can't check localStorage from middleware, so we rely on client-side auth
   // The dashboard layout handles the actual redirect if not authenticated

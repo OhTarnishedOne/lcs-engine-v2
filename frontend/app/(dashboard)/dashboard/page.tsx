@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -55,7 +55,12 @@ const quickActions = [
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
-  const [greeting, setGreeting] = useState("Welcome");
+  const [greeting] = useState(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  });
 
   // Fetch profile
   const { data: profile, isLoading: profileLoading } = useQuery({
@@ -68,14 +73,6 @@ export default function DashboardPage() {
     queryKey: ["onboarding-progress"],
     queryFn: () => api.getOnboardingProgress(),
   });
-
-  // Set time-based greeting
-  useEffect(() => {
-    const hour = new Date().getHours();
-    if (hour < 12) setGreeting("Good morning");
-    else if (hour < 18) setGreeting("Good afternoon");
-    else setGreeting("Good evening");
-  }, []);
 
   const isOnboardingComplete = progress?.is_complete ?? false;
   const userName = profile?.persona
@@ -242,7 +239,7 @@ export default function DashboardPage() {
         <div className="rounded-xl border border-gray-800 bg-[#111827] p-6">
           <div className="mb-4 flex items-center gap-2">
             <AlertCircle className="h-5 w-5 text-[#00D4AA]" />
-            <h3 className="font-semibold text-white">Today's Tip</h3>
+            <h3 className="font-semibold text-white">Today&apos;s Tip</h3>
           </div>
           <div className="rounded-lg bg-[#1A2942]/50 p-4">
             <p className="text-sm text-gray-300">
@@ -254,7 +251,7 @@ export default function DashboardPage() {
               industries, and geographies to reduce risk.
             </p>
             <p className="mt-3 text-xs text-gray-500">
-              "Don't put all your eggs in one basket."
+              &quot;Don&apos;t put all your eggs in one basket.&quot;
             </p>
           </div>
           <Button

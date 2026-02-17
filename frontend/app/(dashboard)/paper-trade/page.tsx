@@ -4,17 +4,8 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-import {
   Wallet,
   TrendingUp,
-  TrendingDown,
   DollarSign,
   Search,
   Loader2,
@@ -27,7 +18,7 @@ import { api } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatCard, SkeletonCard, EmptyState } from "@/components/shared";
-import type { Position, Quote } from "@/lib/api/types";
+
 
 export default function PaperTradePage() {
   const queryClient = useQueryClient();
@@ -57,7 +48,7 @@ export default function PaperTradePage() {
   });
 
   // Search symbols
-  const { data: searchResults, isLoading: searchLoading } = useQuery({
+  const { data: searchResults } = useQuery({
     queryKey: ["search-symbols", searchQuery],
     queryFn: () => api.searchSymbols(searchQuery),
     enabled: searchQuery.length >= 1,

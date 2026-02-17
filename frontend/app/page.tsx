@@ -203,7 +203,7 @@ export default function LandingPage() {
             <div className="hidden h-12 w-px bg-gray-800 sm:block" />
             <div className="text-center">
               <div className="text-3xl font-bold text-[#00D4AA] font-mono">69%</div>
-              <div className="text-sm text-gray-400">Rated "very valuable"</div>
+              <div className="text-sm text-gray-400">Rated &quot;very valuable&quot;</div>
             </div>
             <div className="hidden h-12 w-px bg-gray-800 sm:block" />
             <div className="flex items-center gap-2 text-center">

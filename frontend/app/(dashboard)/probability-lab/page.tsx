@@ -10,7 +10,6 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  ReferenceLine,
 } from "recharts";
 import {
   Target,
@@ -19,7 +18,6 @@ import {
   Loader2,
   CheckCircle,
   AlertCircle,
-  TrendingUp,
   Brain,
   X,
 } from "lucide-react";
@@ -27,15 +25,7 @@ import {
 import { api } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { SkeletonCard, EmptyState } from "@/components/shared";
-import type { PredictionMarket, CalibrationResponse } from "@/lib/api/types";
-
-const CATEGORY_ICONS: Record<string, string> = {
-  fed: "bank",
-  cpi: "chart",
-  gdp: "trending",
-  jobs: "users",
-  default: "target",
-};
+import type { PredictionMarket } from "@/lib/api/types";
 
 const CATEGORY_COLORS: Record<string, string> = {
   fed: "bg-blue-500/20 text-blue-400 border-blue-500/30",
@@ -68,7 +58,7 @@ export default function ProbabilityLabPage() {
   });
 
   // Fetch calibration
-  const { data: calibration, isLoading: calibrationLoading } = useQuery({
+  const { data: calibration } = useQuery({
     queryKey: ["calibration"],
     queryFn: () => api.getCalibration(),
   });

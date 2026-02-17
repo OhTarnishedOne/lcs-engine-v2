@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -25,8 +25,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SkeletonCard } from "@/components/shared";
-import type { Conversation, Message } from "@/lib/api/types";
 
 interface StreamingMessage {
   role: "user" | "assistant";
@@ -158,14 +156,14 @@ export default function ChatPage() {
             } else if (data.type === "error") {
               throw new Error(data.message || "Stream error");
             }
-          } catch (e) {
+          } catch {
             // Skip invalid JSON lines
           }
         }
       }
 
       queryClient.invalidateQueries({ queryKey: ["conversations"] });
-    } catch (error) {
+    } catch {
       setMessages((prev) => {
         const newMessages = [...prev];
         const lastMessage = newMessages[newMessages.length - 1];
@@ -330,7 +328,7 @@ export default function ChatPage() {
                 </h3>
                 <p className="max-w-sm text-sm text-gray-400">
                   Ask me anything about investing, markets, or financial concepts.
-                  I'm here to help you learn.
+                  I&apos;m here to help you learn.
                 </p>
               </div>
             </div>
