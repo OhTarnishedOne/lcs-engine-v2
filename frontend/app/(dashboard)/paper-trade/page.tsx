@@ -416,7 +416,7 @@ export default function PaperTradePage() {
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-gray-800 text-left text-xs text-gray-500">
+                    <tr className="border-b border-gray-800 text-left text-sm text-gray-400">
                       <th className="pb-3 pr-4">Symbol</th>
                       <th className="pb-3 pr-4 text-right">Shares</th>
                       <th className="pb-3 pr-4 text-right">Avg Price</th>

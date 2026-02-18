@@ -308,7 +308,7 @@ export default function ChatPage() {
                     <p className="text-sm font-medium text-gray-300">
                       No conversations yet
                     </p>
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="mt-1 text-sm text-gray-500">
                       Start a new chat to get going
                     </p>
                   </div>

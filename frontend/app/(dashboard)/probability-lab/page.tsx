@@ -510,7 +510,7 @@ export default function ProbabilityLabPage() {
                   </div>
 
                   <div className="rounded-lg bg-[#1A2942]/50 p-3 mb-4">
-                    <p className="text-xs text-gray-400 flex items-start gap-2">
+                    <p className="text-sm text-gray-400 flex items-start gap-2">
                       <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-amber-400" />
                       The market probability is hidden until you submit. This prevents
                       anchoring bias.
