@@ -250,6 +250,7 @@ export default function ChatPage() {
         size="icon"
         className="absolute left-4 top-4 z-20 lg:hidden text-gray-400"
         onClick={() => setMobileSidebarOpen(true)}
+        aria-label="Open sidebar"
       >
         <Menu className="h-5 w-5" />
       </Button>
@@ -274,6 +275,7 @@ export default function ChatPage() {
                 size="icon"
                 className="absolute right-2 top-2 lg:hidden text-gray-400"
                 onClick={() => setMobileSidebarOpen(false)}
+                aria-label="Close sidebar"
               >
                 <X className="h-5 w-5" />
               </Button>
@@ -331,8 +333,9 @@ export default function ChatPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 opacity-0 group-hover:opacity-100"
+                              className="h-8 w-8 opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
                               onClick={(e) => e.stopPropagation()}
+                              aria-label="Conversation options"
                             >
                               <MoreVertical className="h-4 w-4" />
                             </Button>

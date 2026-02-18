@@ -219,7 +219,7 @@ export default function ProbabilityLabPage() {
                   <button
                     onClick={() => !hasPredicted && setSelectedMarket(market)}
                     disabled={hasPredicted}
-                    className={`w-full rounded-xl border bg-[#111827] p-5 text-left transition-all ${
+                    className={`w-full rounded-xl border bg-[#111827] p-5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00D4AA] ${
                       hasPredicted
                         ? "border-gray-800 opacity-60 cursor-not-allowed"
                         : "border-gray-800 hover:border-[#00D4AA]/50 cursor-pointer card-hover-lift"
@@ -448,6 +448,7 @@ export default function ProbabilityLabPage() {
                       variant="ghost"
                       size="icon"
                       onClick={closeModal}
+                      aria-label="Close dialog"
                       className="text-gray-400 hover:text-white"
                     >
                       <X className="h-4 w-4" />
@@ -485,6 +486,7 @@ export default function ProbabilityLabPage() {
                       max="100"
                       value={probability}
                       onChange={(e) => setProbability(parseInt(e.target.value))}
+                      aria-label={`Probability estimate: ${probability}%`}
                       className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#00D4AA]"
                     />
                     <div className="mt-1 flex justify-between text-xs text-gray-500">

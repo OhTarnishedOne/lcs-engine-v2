@@ -288,6 +288,7 @@ export default function PaperTradePage() {
                       size="icon"
                       className="ml-2 h-6 w-6 text-gray-500 hover:text-white"
                       onClick={() => setSelectedSymbol(null)}
+                      aria-label="Clear selected symbol"
                     >
                       <X className="h-3 w-3" />
                     </Button>

@@ -236,6 +236,7 @@ export default function StrategiesPage() {
                 variant="ghost"
                 size="icon"
                 onClick={() => compareMutation.reset()}
+                aria-label="Close comparison"
                 className="text-gray-400 hover:text-white"
               >
                 <X className="h-4 w-4" />
@@ -317,6 +318,7 @@ export default function StrategiesPage() {
                     setExplainQuestion("");
                     explainMutation.reset();
                   }}
+                  aria-label="Close dialog"
                   className="text-gray-400 hover:text-white"
                 >
                   <X className="h-4 w-4" />
@@ -419,6 +421,7 @@ function StrategyCard({
               type="checkbox"
               checked={isSelected}
               onChange={onToggleCompare}
+              aria-label={`Select ${strategy.name} for comparison`}
               className="mt-1 h-5 w-5 rounded border-gray-600 bg-[#1A2942] text-[#00D4AA] focus:ring-[#00D4AA]"
             />
           )}
