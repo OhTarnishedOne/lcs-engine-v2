@@ -3,14 +3,16 @@ from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 
-_ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
+_BACKEND_DIR = Path(__file__).resolve().parent.parent
+_ENV_FILE = _BACKEND_DIR / ".env"
+_DEFAULT_DB = f"sqlite:///{_BACKEND_DIR / 'lcs_dev.db'}"
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=str(_ENV_FILE), env_file_encoding="utf-8")
 
     # Database
-    database_url: str = "sqlite:///./lcs_dev.db"
+    database_url: str = _DEFAULT_DB
 
     # Auth
     jwt_secret_key: str = "change-this-in-production-min-32-chars"

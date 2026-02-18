@@ -42,33 +42,43 @@ class PolygonClient:
                 result = data["results"][0]
                 prev_close = result.get("c", 0)
 
-                # Get today's snapshot for current price
-                snapshot = await self._get(f"/v2/snapshot/locale/us/markets/stocks/tickers/{symbol.upper()}")
+                # Try real-time snapshot (requires paid Polygon tier)
+                try:
+                    snapshot = await self._get(f"/v2/snapshot/locale/us/markets/stocks/tickers/{symbol.upper()}")
 
-                if snapshot.get("ticker"):
-                    ticker_data = snapshot["ticker"]
-                    current = ticker_data.get("day", {}).get("c") or ticker_data.get("prevDay", {}).get("c", prev_close)
-                    prev = ticker_data.get("prevDay", {}).get("c", prev_close)
+                    if snapshot.get("ticker"):
+                        ticker_data = snapshot["ticker"]
+                        current = ticker_data.get("day", {}).get("c") or ticker_data.get("prevDay", {}).get("c", prev_close)
+                        prev = ticker_data.get("prevDay", {}).get("c", prev_close)
 
-                    change = current - prev if prev else 0
-                    change_pct = (change / prev * 100) if prev else 0
+                        change = current - prev if prev else 0
+                        change_pct = (change / prev * 100) if prev else 0
 
-                    return {
-                        "symbol": symbol.upper(),
-                        "price": current,
-                        "change": round(change, 2),
-                        "change_pct": round(change_pct, 2),
-                        "volume": ticker_data.get("day", {}).get("v", 0),
-                        "timestamp": datetime.utcnow().isoformat(),
-                    }
+                        return {
+                            "symbol": symbol.upper(),
+                            "price": current,
+                            "change": round(change, 2),
+                            "change_pct": round(change_pct, 2),
+                            "volume": ticker_data.get("day", {}).get("v", 0),
+                            "timestamp": datetime.utcnow().isoformat(),
+                        }
+                except httpx.HTTPStatusError:
+                    logger.debug(f"Snapshot unavailable for {symbol}, using previous close")
 
-            # Fallback to just prev close
+            # Fallback to previous close
+            prev_close = 0
+            volume = 0
+            if data.get("results") and len(data["results"]) > 0:
+                result = data["results"][0]
+                prev_close = result.get("c", 0)
+                volume = result.get("v", 0)
+
             return {
                 "symbol": symbol.upper(),
                 "price": prev_close,
                 "change": 0,
                 "change_pct": 0,
-                "volume": result.get("v", 0) if data.get("results") else 0,
+                "volume": volume,
                 "timestamp": datetime.utcnow().isoformat(),
             }
         except httpx.HTTPStatusError as e:
