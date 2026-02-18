@@ -299,9 +299,17 @@ export default function ChatPage() {
                     ))}
                   </div>
                 ) : conversations.length === 0 ? (
-                  <p className="text-center text-sm text-gray-500">
-                    No conversations yet
-                  </p>
+                  <div className="flex flex-col items-center py-8 text-center">
+                    <div className="mb-3 rounded-full bg-[#1A2942] p-3">
+                      <MessageSquare className="h-5 w-5 text-[#00D4AA]" />
+                    </div>
+                    <p className="text-sm font-medium text-gray-300">
+                      No conversations yet
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Start a new chat to get going
+                    </p>
+                  </div>
                 ) : (
                   <div className="space-y-1">
                     {conversations.map((conv) => (

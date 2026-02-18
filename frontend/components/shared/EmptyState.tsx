@@ -33,7 +33,7 @@ export function EmptyState({
         <Icon className="h-8 w-8 text-[#00D4AA]" />
       </div>
       <h3 className="mb-2 text-lg font-semibold text-gray-100">{title}</h3>
-      <p className="mb-6 max-w-sm text-sm text-gray-400">{description}</p>
+      <p className="mb-6 max-w-sm text-base text-gray-400">{description}</p>
       {action && (
         <Button
           onClick={action.onClick}

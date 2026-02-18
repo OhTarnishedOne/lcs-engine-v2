@@ -409,7 +409,7 @@ export default function PaperTradePage() {
               <EmptyState
                 icon={TrendingUp}
                 title="No positions yet"
-                description="Ready to make your first paper trade? Search for a stock above."
+                description="Search for a stock symbol above, then place a buy order to open your first position."
               />
             ) : (
               <div className="overflow-x-auto">
