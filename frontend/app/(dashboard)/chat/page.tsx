@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { api, API_URL } from "@/lib/api/client";
+import type { Strategy } from "@/lib/api/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -41,6 +42,26 @@ export default function ChatPage() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const assistantContentRef = useRef("");
+  const rafIdRef = useRef<number>(0);
+
+  // Fetch user strategies for context injection
+  const { data: strategiesData } = useQuery({
+    queryKey: ["strategies"],
+    queryFn: () => api.getStrategies(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const buildStrategyContext = useCallback((strategies: Strategy[]): string => {
+    return strategies
+      .map((s, i) => {
+        const assets = s.assets
+          .map((a) => `${a.ticker} ${a.allocation_pct}%`)
+          .join(", ");
+        return `Strategy ${i + 1}: "${s.name}" (${s.strategy_type}, risk ${s.risk_level}, ${s.time_horizon}) — ${assets}`;
+      })
+      .join("; ");
+  }, []);
 
   // Fetch conversations
   const { data: conversationsData, isLoading: conversationsLoading } = useQuery({
@@ -85,8 +106,21 @@ export default function ChatPage() {
     const userMessage = inputValue.trim();
     setInputValue("");
     setIsStreaming(true);
+    assistantContentRef.current = "";
 
-    // Add user message
+    // Build message with optional strategy context
+    let messageToSend = userMessage;
+    const strategies = strategiesData?.strategies;
+    if (
+      strategies &&
+      strategies.length > 0 &&
+      /strateg|portfolio|my investment|my stock|my holding|allocation/i.test(userMessage)
+    ) {
+      const context = buildStrategyContext(strategies);
+      messageToSend = `${userMessage}\n\n[Context for AI — not from the user: The user has these saved strategies: ${context}]`;
+    }
+
+    // Add user message (display original without context)
     setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
 
     // Add placeholder for assistant
@@ -104,7 +138,7 @@ export default function ChatPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          message: userMessage,
+          message: messageToSend,
           conversation_id: selectedConversationId,
         }),
       });
@@ -115,7 +149,6 @@ export default function ChatPage() {
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
-      let assistantContent = "";
       let newConversationId = selectedConversationId;
 
       while (reader) {
@@ -135,20 +168,30 @@ export default function ChatPage() {
                 setSelectedConversationId(newConversationId);
               }
             } else if (data.type === "token") {
-              assistantContent += data.content;
-              setMessages((prev) => {
-                const newMessages = [...prev];
-                const lastMessage = newMessages[newMessages.length - 1];
-                if (lastMessage.role === "assistant") {
-                  lastMessage.content = assistantContent;
-                }
-                return newMessages;
-              });
+              assistantContentRef.current += data.content;
+              if (!rafIdRef.current) {
+                rafIdRef.current = requestAnimationFrame(() => {
+                  rafIdRef.current = 0;
+                  const content = assistantContentRef.current;
+                  setMessages((prev) => {
+                    const newMessages = [...prev];
+                    const last = newMessages[newMessages.length - 1];
+                    if (last.role === "assistant") last.content = content;
+                    return newMessages;
+                  });
+                });
+              }
             } else if (data.type === "done") {
+              if (rafIdRef.current) {
+                cancelAnimationFrame(rafIdRef.current);
+                rafIdRef.current = 0;
+              }
+              const finalContent = assistantContentRef.current;
               setMessages((prev) => {
                 const newMessages = [...prev];
                 const lastMessage = newMessages[newMessages.length - 1];
                 if (lastMessage.role === "assistant") {
+                  lastMessage.content = finalContent;
                   lastMessage.isStreaming = false;
                 }
                 return newMessages;
@@ -193,6 +236,13 @@ export default function ChatPage() {
   const conversations = conversationsData?.conversations || [];
 
   return (
+    <>
+    <style dangerouslySetInnerHTML={{ __html: `
+      @keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0; }
+      }
+    ` }} />
     <div className="flex h-[calc(100vh-8rem)] overflow-hidden rounded-xl border border-gray-800 bg-[#111827]">
       {/* Mobile sidebar toggle */}
       <Button
@@ -326,7 +376,7 @@ export default function ChatPage() {
                 <h3 className="mb-2 text-lg font-semibold text-white">
                   Start a conversation
                 </h3>
-                <p className="max-w-sm text-sm text-gray-400">
+                <p className="max-w-sm text-base text-gray-400">
                   Ask me anything about investing, markets, or financial concepts.
                   I&apos;m here to help you learn.
                 </p>
@@ -355,10 +405,13 @@ export default function ChatPage() {
                         : "bg-[#1A2942] text-gray-200"
                     }`}
                   >
-                    <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                    <p className="whitespace-pre-wrap text-base leading-relaxed">
                       {message.content}
                       {message.isStreaming && (
-                        <span className="ml-1 inline-block h-4 w-1 animate-pulse bg-[#00D4AA]" />
+                        <span
+                          className="ml-0.5 inline-block w-0.5 h-[1.1em] bg-[#00D4AA] align-middle"
+                          style={{ animation: "blink 1s steps(2) infinite" }}
+                        />
                       )}
                     </p>
                   </div>
@@ -389,7 +442,7 @@ export default function ChatPage() {
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Ask about investing, markets, strategies..."
               disabled={isStreaming}
-              className="flex-1 border-gray-700 bg-[#1A2942] text-white placeholder:text-gray-500 focus:border-[#00D4AA] focus:ring-[#00D4AA]"
+              className="flex-1 border-gray-700 bg-[#1A2942] text-base text-white placeholder:text-gray-500 focus:border-[#00D4AA] focus:ring-[#00D4AA]"
             />
             <Button
               type="submit"
@@ -406,5 +459,6 @@ export default function ChatPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }
