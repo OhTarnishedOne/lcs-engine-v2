@@ -23,6 +23,7 @@ import {
   Lightbulb,
 } from "lucide-react";
 
+import { toast } from "sonner";
 import { api } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,6 +69,10 @@ export default function StrategiesPage() {
       api.generateStrategy(strategyType ? { strategy_type: strategyType } : undefined),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["strategies"] });
+      toast.success("Strategy generated successfully");
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to generate strategy");
     },
   });
 
@@ -76,6 +81,10 @@ export default function StrategiesPage() {
     mutationFn: (id: string) => api.deleteStrategy(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["strategies"] });
+      toast.success("Strategy deleted");
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to delete strategy");
     },
   });
 
@@ -83,12 +92,18 @@ export default function StrategiesPage() {
   const compareMutation = useMutation({
     mutationFn: (strategyIds: string[]) =>
       api.compareStrategies({ strategy_ids: strategyIds }),
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to compare strategies");
+    },
   });
 
   // Explain strategy
   const explainMutation = useMutation({
     mutationFn: ({ id, question }: { id: string; question: string }) =>
       api.explainStrategy(id, { question }),
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Failed to explain strategy");
+    },
   });
 
   const strategies = strategiesData?.strategies || [];
