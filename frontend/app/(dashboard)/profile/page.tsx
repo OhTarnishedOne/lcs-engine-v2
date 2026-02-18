@@ -4,7 +4,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuthStore } from "@/stores/auth-store";
 
 export default function ProfilePage() {
-  const { user } = useAuthStore();
+  const { user, isLoading } = useAuthStore();
+
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <div>
+          <div className="h-8 w-32 rounded skeleton-shimmer" />
+          <div className="mt-2 h-5 w-56 rounded skeleton-shimmer" />
+        </div>
+        <div className="rounded-xl border border-gray-800 bg-[#111827] p-6 space-y-4">
+          <div className="h-6 w-48 rounded skeleton-shimmer" />
+          <div className="h-4 w-36 rounded skeleton-shimmer" />
+          <div className="space-y-3 pt-2">
+            <div className="h-4 w-20 rounded skeleton-shimmer" />
+            <div className="h-5 w-52 rounded skeleton-shimmer" />
+            <div className="h-4 w-24 rounded skeleton-shimmer" />
+            <div className="h-5 w-36 rounded skeleton-shimmer" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">

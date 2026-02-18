@@ -246,8 +246,17 @@ export default function PaperTradePage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value.toUpperCase())}
                 placeholder="Search symbol (e.g., AAPL)"
-                className="border-gray-700 bg-[#1A2942] pl-10 text-white placeholder:text-gray-500"
+                className="border-gray-700 bg-[#1A2942] pl-10 pr-9 text-white placeholder:text-gray-500"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  aria-label="Clear search"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
 
               {/* Search results dropdown */}
               {searchQuery && searchResults && searchResults.length > 0 && (
@@ -354,21 +363,31 @@ export default function PaperTradePage() {
                 </button>
               </div>
 
-              {orderType === "limit" && (
-                <div>
-                  <label className="mb-1 block text-sm text-gray-400">
-                    Limit Price
-                  </label>
-                  <Input
-                    type="number"
-                    value={limitPrice}
-                    onChange={(e) => setLimitPrice(e.target.value)}
-                    placeholder="0.00"
-                    step="0.01"
-                    className="border-gray-700 bg-[#1A2942] font-mono text-white placeholder:text-gray-500"
-                  />
-                </div>
-              )}
+              <AnimatePresence>
+                {orderType === "limit" && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div>
+                      <label className="mb-1 block text-sm text-gray-400">
+                        Limit Price
+                      </label>
+                      <Input
+                        type="number"
+                        value={limitPrice}
+                        onChange={(e) => setLimitPrice(e.target.value)}
+                        placeholder="0.00"
+                        step="0.01"
+                        className="border-gray-700 bg-[#1A2942] font-mono text-white placeholder:text-gray-500"
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <div className="flex gap-3">
                 <Button
@@ -415,7 +434,7 @@ export default function PaperTradePage() {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead>
+                  <thead className="sticky top-0 bg-[#111827]">
                     <tr className="border-b border-gray-800 text-left text-sm text-gray-400">
                       <th className="pb-3 pr-4">Symbol</th>
                       <th className="pb-3 pr-4 text-right">Shares</th>

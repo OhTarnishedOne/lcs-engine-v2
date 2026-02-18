@@ -27,8 +27,8 @@ export default function AuthLayout({
 }) {
   return (
     <div className="flex min-h-screen bg-[#0A1628]">
-      {/* Left branding panel — hidden on mobile */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-center px-16 xl:px-24">
+      {/* Left branding panel — hidden on mobile and tablets */}
+      <div className="hidden xl:flex xl:w-1/2 flex-col justify-center px-16 2xl:px-24">
         <div className="max-w-md">
           <div className="mb-8 flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#00D4AA]">
@@ -59,9 +59,9 @@ export default function AuthLayout({
       </div>
 
       {/* Right form panel */}
-      <div className="flex w-full lg:w-1/2 flex-col items-center justify-center px-6 py-12">
-        {/* Mobile-only logo */}
-        <div className="mb-8 flex flex-col items-center lg:hidden">
+      <div className="flex w-full xl:w-1/2 flex-col items-center justify-center px-6 py-12">
+        {/* Logo — shown when left panel is hidden */}
+        <div className="mb-8 flex flex-col items-center xl:hidden">
           <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[#00D4AA]">
             <BarChart3 className="h-7 w-7 text-[#0A1628]" />
           </div>

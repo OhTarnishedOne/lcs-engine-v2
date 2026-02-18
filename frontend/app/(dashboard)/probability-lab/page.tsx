@@ -484,13 +484,21 @@ export default function ProbabilityLabPage() {
                       type="range"
                       min="0"
                       max="100"
+                      step="5"
+                      list="probability-ticks"
                       value={probability}
                       onChange={(e) => setProbability(parseInt(e.target.value))}
                       aria-label={`Probability estimate: ${probability}%`}
                       className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#00D4AA]"
                     />
+                    <datalist id="probability-ticks">
+                      {[0, 25, 50, 75, 100].map((v) => (
+                        <option key={v} value={v} />
+                      ))}
+                    </datalist>
                     <div className="mt-1 flex justify-between text-xs text-gray-500">
                       <span>Very unlikely</span>
+                      <span>50/50</span>
                       <span>Very likely</span>
                     </div>
                   </div>
