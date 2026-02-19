@@ -1,3 +1,4 @@
+import os
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
@@ -10,6 +11,9 @@ from app.database import Base
 from app.db.models import User, Profile, UserProfile, OnboardingResponse, Conversation, Message, Strategy, StrategyComparison, TradeLog, PredictionMarket, UserPrediction, CalibrationScore  # noqa: F401 - needed for autogenerate
 
 config = context.config
+
+if os.environ.get("DATABASE_URL"):
+    config.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL"])
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

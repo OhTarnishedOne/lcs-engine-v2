@@ -162,6 +162,44 @@ lcs-engine-v2/
 
 ---
 
+## Deployment
+
+### Backend — Railway
+
+The backend deploys to [Railway](https://railway.app) using Docker with a PostgreSQL add-on.
+
+1. Create a new Railway project and add a **PostgreSQL** service.
+2. Add a service from your GitHub repo. Railway will auto-detect `railway.toml`.
+3. Set these environment variables on the backend service:
+
+| Variable | Value |
+|----------|-------|
+| `DATABASE_URL` | Provided automatically by the Railway PostgreSQL plugin |
+| `JWT_SECRET_KEY` | Random string, min 32 chars |
+| `ANTHROPIC_API_KEY` | Your Anthropic API key |
+| `ALPACA_API_KEY` | Alpaca paper trading key |
+| `ALPACA_SECRET_KEY` | Alpaca paper trading secret |
+| `POLYGON_API_KEY` | Polygon.io key |
+| `CORS_ORIGINS` | Your Vercel frontend URL (e.g. `https://lcs-engine.vercel.app`) |
+
+4. Deploy. Railway builds from `backend/Dockerfile`, runs Alembic migrations on startup, then starts uvicorn.
+
+### Frontend — Vercel
+
+The frontend deploys to [Vercel](https://vercel.com) with zero config.
+
+1. Import the GitHub repo in Vercel.
+2. Set **Root Directory** to `frontend`.
+3. Add the environment variable:
+
+| Variable | Value |
+|----------|-------|
+| `NEXT_PUBLIC_API_URL` | `https://<your-railway-backend>.up.railway.app/api` |
+
+4. Deploy. Vercel auto-detects Next.js and builds the frontend.
+
+---
+
 ## License
 
 All rights reserved.

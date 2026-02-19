@@ -6,13 +6,13 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { Lock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -63,18 +63,18 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-lg border-gray-800 bg-[#111827] text-white">
-      <CardHeader className="space-y-2 pb-6">
-        <CardTitle className="text-3xl font-bold text-white">
+    <Card className="w-full max-w-lg border-gray-700 bg-[#111827] text-white shadow-xl">
+      <CardHeader className="space-y-2 px-10 pt-10 pb-6">
+        <CardTitle className="text-2xl font-bold text-white">
           Welcome back
         </CardTitle>
-        <CardDescription className="text-base text-gray-400">
+        <p className="text-base text-gray-400">
           Enter your email and password to sign in
-        </CardDescription>
+        </p>
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="space-y-5">
+          <CardContent className="space-y-5 px-10">
             {error && (
               <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-400">
                 {error}
@@ -93,7 +93,7 @@ export function LoginForm() {
                       type="email"
                       placeholder="you@example.com"
                       autoComplete="email"
-                      className="h-12 text-base border-gray-700 bg-[#1A2942] text-white placeholder:text-gray-500 focus:border-[#00D4AA] focus:ring-[#00D4AA]"
+                      className="h-12 text-base rounded-lg border-gray-700 bg-[#1A2942] text-white placeholder:text-gray-500 focus:border-[#00D4AA] focus:ring-[#00D4AA]"
                       {...field}
                     />
                   </FormControl>
@@ -114,7 +114,7 @@ export function LoginForm() {
                       type="password"
                       placeholder="Enter your password"
                       autoComplete="current-password"
-                      className="h-12 text-base border-gray-700 bg-[#1A2942] text-white placeholder:text-gray-500 focus:border-[#00D4AA] focus:ring-[#00D4AA]"
+                      className="h-12 text-base rounded-lg border-gray-700 bg-[#1A2942] text-white placeholder:text-gray-500 focus:border-[#00D4AA] focus:ring-[#00D4AA]"
                       {...field}
                     />
                   </FormControl>
@@ -123,10 +123,10 @@ export function LoginForm() {
               )}
             />
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4 pt-2">
+          <CardFooter className="flex flex-col space-y-4 px-10 pb-10 pt-2">
             <Button
               type="submit"
-              className="h-12 w-full text-base font-semibold bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0]"
+              className="h-12 w-full text-base font-semibold bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0] hover:-translate-y-0.5 transition-all"
               disabled={isLoading}
             >
               {isLoading ? "Signing in..." : "Sign in"}
@@ -135,11 +135,23 @@ export function LoginForm() {
               Don&apos;t have an account?{" "}
               <Link
                 href="/register"
-                className="font-medium text-[#00D4AA] hover:underline"
+                className="font-medium text-[#00D4AA] hover:underline underline-offset-2"
               >
                 Sign up
               </Link>
             </p>
+
+            {/* Divider */}
+            <div className="flex w-full items-center gap-3 pt-2">
+              <div className="h-px flex-1 bg-gray-700" />
+              <div className="h-px flex-1 bg-gray-700" />
+            </div>
+
+            {/* Trust signal */}
+            <div className="flex items-center justify-center gap-1.5 text-xs text-gray-500">
+              <Lock className="h-3 w-3" />
+              <span>Secure authentication &middot; Your data stays private</span>
+            </div>
           </CardFooter>
         </form>
       </Form>
