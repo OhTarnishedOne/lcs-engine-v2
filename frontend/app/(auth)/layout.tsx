@@ -126,7 +126,7 @@ export default function AuthLayout({
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5 }}
-        className="relative z-10 hidden xl:flex xl:w-[55%] flex-col justify-center px-16 2xl:px-24"
+        className="relative z-10 hidden lg:flex lg:w-[55%] flex-col justify-center px-16 2xl:px-24"
       >
         <div className="max-w-lg">
           {/* Logo */}
@@ -203,10 +203,10 @@ export default function AuthLayout({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2, duration: 0.4 }}
-        className="relative z-10 flex w-full xl:w-[45%] flex-col items-center justify-center px-6 py-12"
+        className="relative z-10 flex w-full lg:w-[45%] flex-col items-center justify-center px-6 py-12"
       >
         {/* Mobile branding — shown when left panel is hidden */}
-        <div className="mb-8 flex flex-col items-center xl:hidden">
+        <div className="mb-8 flex flex-col items-center lg:hidden">
           <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[#00D4AA]">
             <BarChart3 className="h-7 w-7 text-[#0A1628]" />
           </div>
