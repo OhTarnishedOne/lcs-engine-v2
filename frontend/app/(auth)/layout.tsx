@@ -19,14 +19,30 @@ const highlights = [
   },
 ];
 
-const USER_MSG = "What is an ETF?";
-const AI_MSG =
-  'An ETF (exchange-traded fund) is like a sampler platter \u2014 instead of buying one stock, you get a basket of investments in a single purchase. It\u2019s one of the easiest ways to diversify without needing to pick individual winners.';
+const QA_PAIRS = [
+  {
+    user: "What is an ETF?",
+    ai: "An ETF (exchange-traded fund) is like a sampler platter \u2014 instead of buying one stock, you get a basket of investments in a single purchase. It\u2019s one of the easiest ways to diversify without needing to pick individual winners.",
+  },
+  {
+    user: "What is a dividend?",
+    ai: "A dividend is a slice of a company\u2019s profits paid directly to shareholders \u2014 think of it as a thank-you check for being a part-owner. Some investors build entire portfolios around dividends for steady passive income.",
+  },
+  {
+    user: "What is a stock?",
+    ai: "A stock is a tiny ownership stake in a company. When you buy a share of Apple, you literally own a piece of the business \u2014 and as the company grows, your slice can become more valuable over time.",
+  },
+  {
+    user: "What is a bond?",
+    ai: "A bond is essentially an IOU \u2014 you lend money to a company or government, and they pay you back with interest. Bonds are generally steadier than stocks, which is why they\u2019re a go-to for balancing risk in a portfolio.",
+  },
+];
 
 function AIChatPreview() {
   const [phase, setPhase] = useState<"user" | "pause" | "ai" | "done">("user");
   const [aiText, setAiText] = useState("");
   const [userVisible, setUserVisible] = useState(false);
+  const [qaIndex, setQaIndex] = useState(0);
 
   useEffect(() => {
     setUserVisible(true);
@@ -38,14 +54,16 @@ function AIChatPreview() {
     let timeout: ReturnType<typeof setTimeout>;
     let interval: ReturnType<typeof setInterval>;
 
+    const currentAi = QA_PAIRS[qaIndex].ai;
+
     if (phase === "pause") {
       timeout = setTimeout(() => setPhase("ai"), 1000);
     } else if (phase === "ai") {
       let idx = 0;
       interval = setInterval(() => {
         idx++;
-        setAiText(AI_MSG.slice(0, idx));
-        if (idx >= AI_MSG.length) {
+        setAiText(currentAi.slice(0, idx));
+        if (idx >= currentAi.length) {
           clearInterval(interval);
           setPhase("done");
         }
@@ -54,6 +72,7 @@ function AIChatPreview() {
       timeout = setTimeout(() => {
         setUserVisible(false);
         setAiText("");
+        setQaIndex((prev) => (prev + 1) % QA_PAIRS.length);
         setPhase("user");
         setTimeout(() => {
           setUserVisible(true);
@@ -66,7 +85,7 @@ function AIChatPreview() {
       clearTimeout(timeout);
       clearInterval(interval);
     };
-  }, [phase]);
+  }, [phase, qaIndex]);
 
   return (
     <div className="rounded-xl border border-gray-700/50 bg-[#0D1B2A] p-4 max-w-sm">
@@ -84,7 +103,7 @@ function AIChatPreview() {
               className="flex justify-end"
             >
               <div className="rounded-xl rounded-br-sm bg-[#00D4AA]/15 px-3 py-2 text-sm text-gray-200">
-                {USER_MSG}
+                {QA_PAIRS[qaIndex].user}
               </div>
             </motion.div>
           )}
