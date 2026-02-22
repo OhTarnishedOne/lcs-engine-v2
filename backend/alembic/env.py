@@ -8,7 +8,7 @@ from alembic import context
 
 # Import your models and Base
 from app.database import Base
-from app.db.models import User, Profile, UserProfile, OnboardingResponse, Conversation, Message, Strategy, StrategyComparison, TradeLog, PredictionMarket, UserPrediction, CalibrationScore  # noqa: F401 - needed for autogenerate
+from app.db.models import User, Profile, UserProfile, OnboardingResponse, Conversation, Message, Strategy, StrategyComparison, TradeLog, PredictionMarket, UserPrediction, CalibrationScore, AnalyticsEvent  # noqa: F401 - needed for autogenerate
 
 config = context.config
 

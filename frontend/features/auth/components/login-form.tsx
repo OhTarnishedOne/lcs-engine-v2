@@ -26,6 +26,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useAuthStore } from "@/stores/auth-store";
+import { trackEvent } from "@/lib/analytics";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -54,6 +55,7 @@ export function LoginForm() {
 
     try {
       await login(data);
+      trackEvent("login_completed");
       router.push("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");

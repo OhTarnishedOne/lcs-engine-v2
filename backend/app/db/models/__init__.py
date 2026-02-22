@@ -5,6 +5,7 @@ from .chat import Conversation, Message
 from .strategy import Strategy, StrategyComparison
 from .trading import TradeLog
 from .probability import PredictionMarket, UserPrediction, CalibrationScore
+from .analytics import AnalyticsEvent
 
 __all__ = [
     "User",
@@ -19,4 +20,5 @@ __all__ = [
     "PredictionMarket",
     "UserPrediction",
     "CalibrationScore",
+    "AnalyticsEvent",
 ]

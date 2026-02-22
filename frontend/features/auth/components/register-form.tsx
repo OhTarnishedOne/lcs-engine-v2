@@ -26,6 +26,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useAuthStore } from "@/stores/auth-store";
+import { trackEvent } from "@/lib/analytics";
 
 const registerSchema = z
   .object({
@@ -67,6 +68,7 @@ export function RegisterForm() {
 
     try {
       await register({ email: data.email, password: data.password });
+      trackEvent("signup_completed");
       router.push("/onboarding");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");

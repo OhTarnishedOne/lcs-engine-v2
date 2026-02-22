@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 
 import { api } from "@/lib/api/client";
+import { trackEvent } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import { SkeletonCard, EmptyState } from "@/components/shared";
 import type { PredictionMarket } from "@/lib/api/types";
@@ -68,6 +69,7 @@ export default function ProbabilityLabPage() {
     mutationFn: (data: { market_id: string; probability: number; reasoning?: string }) =>
       api.submitPrediction(data),
     onSuccess: (result) => {
+      trackEvent("prediction_submitted");
       queryClient.invalidateQueries({ queryKey: ["predictions"] });
       queryClient.invalidateQueries({ queryKey: ["calibration"] });
       queryClient.invalidateQueries({ queryKey: ["markets"] });

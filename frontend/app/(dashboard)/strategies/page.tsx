@@ -25,6 +25,7 @@ import {
 
 import { toast } from "sonner";
 import { api } from "@/lib/api/client";
+import { trackEvent } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SkeletonCard, RiskMeter, EmptyState } from "@/components/shared";
@@ -68,6 +69,7 @@ export default function StrategiesPage() {
     mutationFn: (strategyType?: string) =>
       api.generateStrategy(strategyType ? { strategy_type: strategyType } : undefined),
     onSuccess: () => {
+      trackEvent("strategy_generated");
       queryClient.invalidateQueries({ queryKey: ["strategies"] });
       toast.success("Strategy generated successfully");
     },
@@ -272,9 +274,11 @@ export default function StrategiesPage() {
               <StrategyCard
                 strategy={strategy}
                 isExpanded={expandedId === strategy.id}
-                onToggleExpand={() =>
-                  setExpandedId(expandedId === strategy.id ? null : strategy.id)
-                }
+                onToggleExpand={() => {
+                  const expanding = expandedId !== strategy.id;
+                  setExpandedId(expanding ? strategy.id : null);
+                  if (expanding) trackEvent("strategy_viewed");
+                }}
                 compareMode={compareMode}
                 isSelected={selectedForCompare.includes(strategy.id)}
                 onToggleCompare={() => toggleCompare(strategy.id)}

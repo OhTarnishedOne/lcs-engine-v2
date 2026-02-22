@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { api } from "@/lib/api/client";
+import { trackEvent } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatCard, SkeletonCard, EmptyState } from "@/components/shared";
@@ -72,6 +73,7 @@ export default function PaperTradePage() {
       limit_price?: number;
     }) => api.placeOrder(order),
     onSuccess: () => {
+      trackEvent("paper_trade_placed");
       queryClient.invalidateQueries({ queryKey: ["portfolio"] });
       queryClient.invalidateQueries({ queryKey: ["positions"] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });

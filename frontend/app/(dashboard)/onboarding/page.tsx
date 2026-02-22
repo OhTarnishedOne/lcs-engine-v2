@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -11,6 +11,7 @@ import { api } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { SkeletonCard } from "@/components/shared";
 import type { OnboardingSection } from "@/lib/api/types";
+import { trackEvent } from "@/lib/analytics";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -22,6 +23,14 @@ export default function OnboardingPage() {
   const [completedNow, setCompletedNow] = useState(false);
   const [hasResumed, setHasResumed] = useState(false);
   const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onboardingTrackedRef = useRef(false);
+
+  useEffect(() => {
+    if (!onboardingTrackedRef.current) {
+      onboardingTrackedRef.current = true;
+      trackEvent("onboarding_started");
+    }
+  }, []);
 
   // Fetch questions
   const { data: questionsData, isLoading } = useQuery({
@@ -65,6 +74,7 @@ export default function OnboardingPage() {
     mutationFn: ({ section, responses }: { section: number; responses: Record<string, string> }) =>
       api.submitSectionResponses(section, responses),
     onSuccess: (data) => {
+      trackEvent("onboarding_step_completed", { section: currentSectionIndex + 1 });
       queryClient.invalidateQueries({ queryKey: ["onboarding-progress"] });
       if (data.is_complete) {
         completeMutation.mutate();
@@ -80,6 +90,7 @@ export default function OnboardingPage() {
   const completeMutation = useMutation({
     mutationFn: () => api.completeOnboarding(),
     onSuccess: () => {
+      trackEvent("onboarding_completed");
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       queryClient.invalidateQueries({ queryKey: ["onboarding-progress"] });
       setCompletedNow(true);

@@ -4,6 +4,7 @@
 
 import { create } from "zustand";
 import { api } from "@/lib/api/client";
+import { trackEvent } from "@/lib/analytics";
 import type { User, AuthResponse, LoginRequest, RegisterRequest } from "@/lib/api/types";
 
 interface AuthState {
@@ -55,6 +56,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true });
     if (api.isAuthenticated()) {
       await get().fetchUser();
+      if (get().isAuthenticated) {
+        trackEvent("session_started");
+      }
     }
     set({ isLoading: false });
   },

@@ -14,6 +14,7 @@ from .trading.router import router as trading_router
 from .probability.router import router as probability_router
 from .probability.service import ProbabilityService
 from .admin.router import router as admin_router
+from .analytics.router import router as analytics_router
 
 settings = get_settings()
 
@@ -58,6 +59,7 @@ app.include_router(strategies_router, prefix="/api/strategies")
 app.include_router(trading_router, prefix="/api/trading")
 app.include_router(probability_router, prefix="/api/probability")
 app.include_router(admin_router, prefix="/api")
+app.include_router(analytics_router, prefix="/api")
 
 
 @app.get("/")

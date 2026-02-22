@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { api, API_URL } from "@/lib/api/client";
+import { trackEvent } from "@/lib/analytics";
 import type { Strategy } from "@/lib/api/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,6 +105,7 @@ export default function ChatPage() {
     if (!inputValue.trim() || isStreaming) return;
 
     const userMessage = inputValue.trim();
+    trackEvent("chat_message_sent");
     setInputValue("");
     setIsStreaming(true);
     assistantContentRef.current = "";
