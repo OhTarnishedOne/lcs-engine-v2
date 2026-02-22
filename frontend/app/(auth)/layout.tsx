@@ -140,7 +140,7 @@ export default function AuthLayout({
         <div className="absolute -left-32 top-1/3 h-[500px] w-[500px] rounded-full bg-[#00D4AA]/[0.07] blur-[120px]" />
       </div>
 
-      {/* Left branding panel — hidden below xl */}
+      {/* Left branding panel — hidden below lg */}
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
@@ -225,14 +225,31 @@ export default function AuthLayout({
         className="relative z-10 flex w-full lg:w-[45%] flex-col items-center justify-center px-6 py-12"
       >
         {/* Mobile branding — shown when left panel is hidden */}
-        <div className="mb-8 flex flex-col items-center lg:hidden">
-          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-[#00D4AA]">
-            <BarChart3 className="h-7 w-7 text-[#0A1628]" />
+        <div className="mb-10 w-full max-w-lg lg:hidden">
+          <div className="mb-6 flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#00D4AA]">
+              <BarChart3 className="h-6 w-6 text-[#0A1628]" />
+            </div>
+            <span className="text-2xl font-bold text-white">LCS Engine</span>
           </div>
-          <span className="text-2xl font-bold text-white">LCS Engine</span>
-          <p className="mt-2 max-w-xs text-center text-sm text-gray-400">
-            AI-powered financial education that adapts to you
+          <h2 className="mb-3 text-3xl font-bold leading-tight tracking-tight text-white sm:text-4xl">
+            Learn to invest.{" "}
+            <span className="text-[#00D4AA]">Without the fear.</span>
+          </h2>
+          <p className="mb-6 text-base text-gray-400">
+            AI-powered financial education that adapts to your goals, risk
+            tolerance, and learning style.
           </p>
+          <div className="mb-8 space-y-3">
+            {highlights.map((h) => (
+              <div key={h.text} className="flex items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#1A2942]">
+                  <h.icon className="h-4 w-4 text-[#00D4AA]" />
+                </div>
+                <span className="text-sm text-gray-300">{h.text}</span>
+              </div>
+            ))}
+          </div>
         </div>
         {children}
       </motion.div>
