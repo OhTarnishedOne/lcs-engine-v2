@@ -113,22 +113,26 @@ export default function ProbabilityLabPage() {
   };
 
   // Calibration chart data
+  const hasCalibrationData = (calibration?.calibration_curve ?? []).length > 0;
+  const resolvedCount = calibration?.resolved_predictions ?? 0;
+  const totalCount = calibration?.total_predictions ?? 0;
+
   const calibrationData = [
-    { predicted: 0, actual: 0, perfect: 0 },
-    { predicted: 10, actual: 10, perfect: 10 },
-    { predicted: 20, actual: 20, perfect: 20 },
-    { predicted: 30, actual: 30, perfect: 30 },
-    { predicted: 40, actual: 40, perfect: 40 },
-    { predicted: 50, actual: 50, perfect: 50 },
-    { predicted: 60, actual: 60, perfect: 60 },
-    { predicted: 70, actual: 70, perfect: 70 },
-    { predicted: 80, actual: 80, perfect: 80 },
-    { predicted: 90, actual: 90, perfect: 90 },
-    { predicted: 100, actual: 100, perfect: 100 },
+    { predicted: 0, perfect: 0, actual: undefined as number | undefined },
+    { predicted: 10, perfect: 10, actual: undefined as number | undefined },
+    { predicted: 20, perfect: 20, actual: undefined as number | undefined },
+    { predicted: 30, perfect: 30, actual: undefined as number | undefined },
+    { predicted: 40, perfect: 40, actual: undefined as number | undefined },
+    { predicted: 50, perfect: 50, actual: undefined as number | undefined },
+    { predicted: 60, perfect: 60, actual: undefined as number | undefined },
+    { predicted: 70, perfect: 70, actual: undefined as number | undefined },
+    { predicted: 80, perfect: 80, actual: undefined as number | undefined },
+    { predicted: 90, perfect: 90, actual: undefined as number | undefined },
+    { predicted: 100, perfect: 100, actual: undefined as number | undefined },
   ];
 
-  if (calibration?.calibration_curve) {
-    calibration.calibration_curve.forEach((bucket) => {
+  if (hasCalibrationData) {
+    calibration!.calibration_curve.forEach((bucket) => {
       const index = Math.floor(bucket.predicted_avg * 10);
       if (index >= 0 && index < calibrationData.length) {
         calibrationData[index].actual = bucket.actual_rate * 100;
@@ -292,14 +296,19 @@ export default function ProbabilityLabPage() {
                   <Tooltip
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
+                        const point = payload[0].payload;
                         return (
                           <div className="rounded-lg border border-gray-700 bg-[#1F2937] px-3 py-2 text-sm">
                             <p className="text-gray-400">
-                              Predicted: {payload[0].payload.predicted}%
+                              Predicted: {point.predicted}%
                             </p>
-                            <p className="text-[#00D4AA]">
-                              Actual: {payload[0].payload.actual.toFixed(0)}%
-                            </p>
+                            {point.actual !== undefined ? (
+                              <p className="text-[#00D4AA]">
+                                Actual: {point.actual.toFixed(0)}%
+                              </p>
+                            ) : (
+                              <p className="text-gray-500">No data yet</p>
+                            )}
                           </div>
                         );
                       }
@@ -313,18 +322,25 @@ export default function ProbabilityLabPage() {
                     strokeDasharray="5 5"
                     dot={false}
                   />
-                  <Line
-                    type="monotone"
-                    dataKey="actual"
-                    stroke="#00D4AA"
-                    strokeWidth={2}
-                    dot={{ fill: "#00D4AA", r: 4 }}
-                  />
+                  {hasCalibrationData && (
+                    <Line
+                      type="monotone"
+                      dataKey="actual"
+                      stroke="#00D4AA"
+                      strokeWidth={2}
+                      dot={{ fill: "#00D4AA", r: 4 }}
+                      connectNulls
+                    />
+                  )}
                 </LineChart>
               </ResponsiveContainer>
             </div>
             <p className="mt-2 text-center text-xs text-gray-500">
-              Perfect calibration follows the diagonal line
+              {hasCalibrationData
+                ? "Perfect calibration follows the diagonal line"
+                : resolvedCount === 0
+                ? "Your calibration curve will appear once markets resolve"
+                : "Submit more predictions to build your calibration curve"}
             </p>
           </div>
 
@@ -337,7 +353,9 @@ export default function ProbabilityLabPage() {
             {!calibration?.detected_biases || calibration.detected_biases.length === 0 ? (
               <div className="rounded-lg bg-[#1A2942]/50 p-4 text-center">
                 <p className="text-sm text-gray-400">
-                  No biases detected yet. Make more predictions to discover patterns.
+                  {resolvedCount < 5
+                    ? `${resolvedCount === 0 ? "No" : resolvedCount} resolved prediction${resolvedCount !== 1 ? "s" : ""} so far. Bias detection requires at least 5 resolved predictions.`
+                    : "No biases detected — your predictions look well-calibrated!"}
                 </p>
               </div>
             ) : (

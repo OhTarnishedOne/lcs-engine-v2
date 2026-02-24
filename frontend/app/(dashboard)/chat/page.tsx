@@ -143,6 +143,7 @@ export default function ChatPage() {
           message: messageToSend,
           conversation_id: selectedConversationId,
         }),
+        cache: "no-store",
       });
 
       if (!response.ok) {
@@ -152,15 +153,18 @@ export default function ChatPage() {
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let newConversationId = selectedConversationId;
+      let sseBuffer = "";
 
       while (reader) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value);
-        const lines = chunk.split("\n").filter((line) => line.startsWith("data: "));
+        sseBuffer += decoder.decode(value, { stream: true });
+        const lines = sseBuffer.split("\n");
+        sseBuffer = lines.pop() || ""; // Keep incomplete last line in buffer
 
         for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
           try {
             const data = JSON.parse(line.slice(6));
 
@@ -201,8 +205,9 @@ export default function ChatPage() {
             } else if (data.type === "error") {
               throw new Error(data.message || "Stream error");
             }
-          } catch {
-            // Skip invalid JSON lines
+          } catch (e) {
+            if (e instanceof Error && e.message !== "Stream error") continue;
+            throw e;
           }
         }
       }
