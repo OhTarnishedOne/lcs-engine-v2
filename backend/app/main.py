@@ -1,3 +1,5 @@
+import asyncio
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -13,9 +15,11 @@ from .strategies.router import router as strategies_router
 from .trading.router import router as trading_router
 from .probability.router import router as probability_router
 from .probability.service import ProbabilityService
+from .probability.background import market_automation_loop
 from .admin.router import router as admin_router
 from .analytics.router import router as analytics_router
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
@@ -27,10 +31,38 @@ async def lifespan(app: FastAPI):
     try:
         service = ProbabilityService(db)
         service.seed_markets_if_empty()
+
+        # Backfill resolution_metadata onto existing seed markets
+        if settings.fred_api_key:
+            from .integrations.fred import FredClient
+            from .probability.resolution import MarketAutomation
+
+            fred = FredClient(api_key=settings.fred_api_key)
+            try:
+                automation = MarketAutomation(db, fred, service)
+                updated = await automation.backfill_seed_markets()
+                if updated:
+                    logger.info(f"Backfilled {updated} seed markets with resolution metadata")
+            finally:
+                await fred.close()
     finally:
         db.close()
+
+    # Start background market automation (if FRED key configured)
+    task = None
+    if settings.fred_api_key:
+        task = asyncio.create_task(market_automation_loop())
+        logger.info("Started market automation background task")
+
     yield
-    # Shutdown: nothing needed
+
+    # Shutdown: cancel background task
+    if task:
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
 
 
 app = FastAPI(

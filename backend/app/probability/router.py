@@ -10,7 +10,10 @@ from sqlalchemy.orm import Session
 from ..deps import get_db, get_current_user, get_kalshi_client
 from ..db.models import User
 from ..integrations import KalshiClient
+from ..integrations.fred import FredClient
+from ..settings import get_settings
 from .service import ProbabilityService
+from .resolution import MarketAutomation
 from .schemas import (
     MarketResponse,
     MarketListResponse,
@@ -173,14 +176,25 @@ async def get_calibration(
 async def check_resolutions(
     current_user: User = Depends(get_current_user),
     service: ProbabilityService = Depends(get_probability_service),
+    db: Session = Depends(get_db),
 ) -> dict:
-    """
-    Manual check for resolved markets.
-    In production, this would be admin-only or a scheduled job.
-    """
-    # For now, this is a placeholder that could check Kalshi for resolutions
-    # In a real implementation, this would query Kalshi and update resolved markets
-    return {
-        "message": "Resolution check complete",
-        "resolved_markets": 0,
-    }
+    """Trigger a manual resolution check for all pending FRED-backed markets."""
+    settings = get_settings()
+    if not settings.fred_api_key:
+        return {
+            "message": "FRED API key not configured",
+            "resolved_markets": 0,
+            "checked_markets": 0,
+        }
+
+    fred = FredClient(api_key=settings.fred_api_key)
+    try:
+        automation = MarketAutomation(db, fred, service)
+        result = await automation.check_and_resolve()
+        return {
+            "message": "Resolution check complete",
+            "resolved_markets": len(result["resolved"]),
+            "checked_markets": result["checked"],
+        }
+    finally:
+        await fred.close()

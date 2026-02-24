@@ -5,6 +5,7 @@ from .ai_client import ResilientAIClient
 from .alpaca import AlpacaClient
 from .polygon import PolygonClient
 from .kalshi import KalshiClient
+from .fred import FredClient
 
 __all__ = [
     "AnthropicClient",
@@ -13,4 +14,5 @@ __all__ = [
     "AlpacaClient",
     "PolygonClient",
     "KalshiClient",
+    "FredClient",
 ]

@@ -44,6 +44,10 @@ class PredictionMarket(Base):
         String(10), nullable=True
     )  # "yes" or "no"
 
+    resolution_metadata: Mapped[Optional[dict]] = mapped_column(
+        JSON, nullable=True
+    )  # Auto-resolution rule for FRED-backed markets
+
     explainer: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     investing_connection: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
