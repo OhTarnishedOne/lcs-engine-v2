@@ -98,20 +98,33 @@ export default function ProfilePage() {
   }
 
   if (error || !profile) {
+    const isApiError = !!error;
     return (
       <div className="mx-auto max-w-3xl">
         <Card className="border-gray-800 bg-[#111827] p-6">
           <CardContent className="p-0 text-center">
             <p className="text-gray-400">
-              Complete onboarding to see your profile.
+              {isApiError
+                ? "Something went wrong loading your profile. Please try again."
+                : "Complete onboarding to see your profile."}
             </p>
-            <Button
-              onClick={() => (window.location.href = "/onboarding")}
-              className="mt-4 bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0]"
-            >
-              Start Onboarding
-              <ChevronRight className="ml-1 h-4 w-4" />
-            </Button>
+            {isApiError ? (
+              <Button
+                onClick={() => window.location.reload()}
+                className="mt-4 bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0]"
+              >
+                Retry
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            ) : (
+              <Button
+                onClick={() => (window.location.href = "/onboarding")}
+                className="mt-4 bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0]"
+              >
+                Start Onboarding
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>

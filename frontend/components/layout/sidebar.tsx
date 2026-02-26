@@ -14,7 +14,10 @@ import {
   UserCircle,
 } from "lucide-react";
 
+import { useQuery } from "@tanstack/react-query";
+
 import { cn } from "@/lib/utils";
+import { api } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useUIStore } from "@/stores/ui-store";
@@ -27,13 +30,19 @@ const navigation = [
   { name: "Probability Lab", href: "/probability-lab", icon: Target },
 ];
 
-const bottomNav = [
-  { name: "Profile", href: "/profile", icon: UserCircle },
-  { name: "Onboarding", href: "/onboarding", icon: GraduationCap },
-];
-
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+
+  const { data: progress } = useQuery({
+    queryKey: ["onboarding-progress"],
+    queryFn: () => api.getOnboardingProgress(),
+  });
+
+  const isOnboardingComplete = progress?.is_complete ?? false;
+
+  const bottomNav = isOnboardingComplete
+    ? [{ name: "Profile", href: "/profile", icon: UserCircle }]
+    : [{ name: "Onboarding", href: "/onboarding", icon: GraduationCap }];
 
   return (
     <nav className="flex flex-1 flex-col">
