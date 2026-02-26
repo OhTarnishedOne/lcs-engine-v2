@@ -51,7 +51,7 @@ def _build_user_profile_response(profile) -> UserProfileResponse:
         current_situation=profile.current_situation,
         has_investment_account=profile.has_investment_account,
         has_retirement_account=profile.has_retirement_account,
-        barriers=profile.barriers,
+        barriers=_coerce_to_list(profile.barriers),
         biggest_barrier=profile.biggest_barrier,
         primary_goal=profile.primary_goal,
         specific_goal_description=profile.specific_goal_description,
@@ -61,13 +61,24 @@ def _build_user_profile_response(profile) -> UserProfileResponse:
         monthly_investable=profile.monthly_investable,
         learning_preference=profile.learning_preference,
         time_commitment=profile.time_commitment,
-        interests=profile.interests,
+        interests=_coerce_to_list(profile.interests),
         persona=profile.persona,
         persona_description=profile.persona_description,
         recommended_path=profile.recommended_path,
         onboarding_completed=profile.onboarding_completed,
         onboarding_completed_at=profile.onboarding_completed_at,
     )
+
+
+def _coerce_to_list(value) -> list[str] | None:
+    """Coerce a DB value to list[str]. Handles single strings stored without JSON array wrapper."""
+    if value is None:
+        return None
+    if isinstance(value, list):
+        return value
+    if isinstance(value, str):
+        return [value]
+    return None
 
 
 def _build_raw_profile_response(profile) -> RawProfileResponse:
@@ -79,7 +90,7 @@ def _build_raw_profile_response(profile) -> RawProfileResponse:
         current_situation=profile.current_situation,
         has_investment_account=profile.has_investment_account,
         has_retirement_account=profile.has_retirement_account,
-        barriers=profile.barriers,
+        barriers=_coerce_to_list(profile.barriers),
         biggest_barrier=profile.biggest_barrier,
         primary_goal=profile.primary_goal,
         specific_goal_description=profile.specific_goal_description,
@@ -89,7 +100,7 @@ def _build_raw_profile_response(profile) -> RawProfileResponse:
         monthly_investable=profile.monthly_investable,
         learning_preference=profile.learning_preference,
         time_commitment=profile.time_commitment,
-        interests=profile.interests,
+        interests=_coerce_to_list(profile.interests),
         onboarding_completed=profile.onboarding_completed,
         onboarding_completed_at=profile.onboarding_completed_at,
     )

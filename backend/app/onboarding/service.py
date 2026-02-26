@@ -435,8 +435,11 @@ class OnboardingService:
 
         # Interests summary
         interests_summary = None
-        if profile.interests:
-            labels = [interest_labels.get(i, i) for i in profile.interests]
+        raw_interests = profile.interests
+        if isinstance(raw_interests, str):
+            raw_interests = [raw_interests]
+        if raw_interests:
+            labels = [interest_labels.get(i, i) for i in raw_interests]
             if len(labels) == 1:
                 interests_summary = f"You're most interested in {labels[0]}."
             elif len(labels) == 2:
