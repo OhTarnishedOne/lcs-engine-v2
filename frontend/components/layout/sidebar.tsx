@@ -11,6 +11,7 @@ import {
   MessageSquare,
   X,
   BarChart3,
+  UserCircle,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ const navigation = [
 ];
 
 const bottomNav = [
+  { name: "Profile", href: "/profile", icon: UserCircle },
   { name: "Onboarding", href: "/onboarding", icon: GraduationCap },
 ];
 

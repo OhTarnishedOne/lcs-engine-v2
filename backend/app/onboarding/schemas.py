@@ -119,6 +119,75 @@ class UserProfileResponse(BaseModel):
     onboarding_completed_at: Optional[datetime] = None
 
 
+class UpdateProfileRequest(BaseModel):
+    """Partial update for editable profile fields."""
+    primary_goal: Optional[str] = None
+    specific_goal_description: Optional[str] = None
+    time_horizon: Optional[str] = None
+    risk_tolerance: Optional[str] = None
+    monthly_investable: Optional[str] = None
+    learning_preference: Optional[str] = None
+    time_commitment: Optional[str] = None
+    interests: Optional[list[str]] = None
+
+
+class RawProfileResponse(BaseModel):
+    """Canonical DB fields — editable raw values."""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    user_id: str
+
+    # Section 1
+    experience_level: Optional[str] = None
+    current_situation: Optional[str] = None
+    has_investment_account: Optional[bool] = None
+    has_retirement_account: Optional[bool] = None
+
+    # Section 2
+    barriers: Optional[list[str]] = None
+    biggest_barrier: Optional[str] = None
+
+    # Section 3
+    primary_goal: Optional[str] = None
+    specific_goal_description: Optional[str] = None
+    time_horizon: Optional[str] = None
+
+    # Section 4
+    risk_tolerance: Optional[str] = None
+    loss_reaction: Optional[str] = None
+    monthly_investable: Optional[str] = None
+
+    # Section 5
+    learning_preference: Optional[str] = None
+    time_commitment: Optional[str] = None
+    interests: Optional[list[str]] = None
+
+    # Status
+    onboarding_completed: bool = False
+    onboarding_completed_at: Optional[datetime] = None
+
+
+class DerivedProfileResponse(BaseModel):
+    """Computed server-side from raw profile data. Never stored directly."""
+    persona: Optional[str] = None
+    persona_label: Optional[str] = None
+    persona_description: Optional[str] = None
+    recommended_path: Optional[str] = None
+
+    experience_summary: Optional[str] = None
+    goals_summary: Optional[str] = None
+    risk_summary: Optional[str] = None
+    interests_summary: Optional[str] = None
+    learning_summary: Optional[str] = None
+
+
+class FullProfileResponse(BaseModel):
+    """Combined raw + derived profile response."""
+    raw: RawProfileResponse
+    derived: DerivedProfileResponse
+
+
 class PersonalizedTip(BaseModel):
     title: str
     description: str

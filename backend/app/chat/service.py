@@ -6,6 +6,7 @@ This is where the magic happens - personalizing Claude based on user's onboardin
 """
 
 import json
+import re
 from datetime import datetime, UTC
 from typing import AsyncGenerator, Optional
 
@@ -18,6 +19,66 @@ from ..settings import get_settings
 settings = get_settings()
 
 
+# Topic-to-interest mapping for deterministic match context
+TOPIC_INTEREST_MAP: dict[str, list[str]] = {
+    "stocks": ["stocks"],
+    "stock": ["stocks"],
+    "equities": ["stocks"],
+    "shares": ["stocks"],
+    "etf": ["etfs"],
+    "etfs": ["etfs"],
+    "index fund": ["etfs"],
+    "index funds": ["etfs"],
+    "s&p 500": ["etfs", "stocks"],
+    "vanguard": ["etfs"],
+    "bond": ["bonds"],
+    "bonds": ["bonds"],
+    "fixed income": ["bonds"],
+    "treasury": ["bonds"],
+    "treasuries": ["bonds"],
+    "yield": ["bonds"],
+    "crypto": ["crypto"],
+    "cryptocurrency": ["crypto"],
+    "bitcoin": ["crypto"],
+    "ethereum": ["crypto"],
+    "blockchain": ["crypto"],
+    "real estate": ["real_estate"],
+    "reit": ["real_estate"],
+    "property": ["real_estate"],
+    "housing": ["real_estate"],
+    "mortgage": ["real_estate"],
+    "retirement": ["retirement"],
+    "401k": ["retirement"],
+    "401(k)": ["retirement"],
+    "ira": ["retirement"],
+    "roth": ["retirement"],
+    "pension": ["retirement"],
+    "social security": ["retirement"],
+}
+
+# Related topic connections
+RELATED_TOPICS: dict[str, list[str]] = {
+    "stocks": ["etfs"],
+    "etfs": ["stocks", "bonds"],
+    "bonds": ["etfs", "retirement"],
+    "crypto": ["stocks"],
+    "real_estate": ["retirement"],
+    "retirement": ["bonds", "etfs"],
+}
+
+
+def _sanitize_text(text: str) -> str:
+    """Sanitize free-text input to prevent prompt injection."""
+    # Remove potential instruction-like patterns
+    text = re.sub(r'(?i)(ignore|disregard|forget)\s+(previous|above|all)\s+(instructions?|rules?|prompts?)', '', text)
+    # Remove markdown-style system prompts
+    text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
+    # Strip excessive whitespace
+    text = ' '.join(text.split())
+    # Truncate to reasonable length
+    return text[:500]
+
+
 class ChatService:
     """Service for managing AI chat conversations."""
 
@@ -25,7 +86,38 @@ class ChatService:
         self.db = db
         self.anthropic = ai_client  # Keep attribute name for compatibility
 
-    def build_system_prompt(self, user_profile: Optional[UserProfile]) -> str:
+    @staticmethod
+    def _build_match_context(interests: list[str], message: str) -> dict:
+        """
+        Build structured match context for deterministic topic matching.
+        Returns dict with direct_matches, related_topics, and use_match_language flag.
+        """
+        message_lower = message.lower()
+        direct_matches: list[str] = []
+        related_topics: list[str] = []
+
+        # Check message against topic map
+        for keyword, mapped_interests in TOPIC_INTEREST_MAP.items():
+            if keyword in message_lower:
+                for interest in mapped_interests:
+                    if interest in interests and interest not in direct_matches:
+                        direct_matches.append(interest)
+
+        # Find related topics from direct matches
+        seen = set(direct_matches)
+        for match in direct_matches:
+            for related in RELATED_TOPICS.get(match, []):
+                if related in interests and related not in seen:
+                    related_topics.append(related)
+                    seen.add(related)
+
+        return {
+            "direct_matches": direct_matches,
+            "related_topics": related_topics,
+            "use_match_language": len(direct_matches) > 0,
+        }
+
+    def build_system_prompt(self, user_profile: Optional[UserProfile], user_message: str = "") -> str:
         """
         Build a dynamic system prompt using the user's onboarding data.
         This is what makes the AI feel personal.
@@ -40,6 +132,8 @@ class ChatService:
         goal = user_profile.primary_goal or "learn about investing"
         risk = user_profile.risk_tolerance or "unknown"
         learning_pref = user_profile.learning_preference or "unknown"
+        time_horizon = user_profile.time_horizon or "not specified"
+        interests = user_profile.interests or []
 
         # Map persona to communication style
         tone_map = {
@@ -66,15 +160,59 @@ class ChatService:
         tone = tone_map.get(persona, tone_map["fresh_start"])
         sensitivity = barrier_notes.get(barrier, "Be encouraging and patient. Meet them where they are.")
 
+        # Format interests for display
+        interest_labels = {
+            "stocks": "individual stocks",
+            "etfs": "ETFs & index funds",
+            "bonds": "bonds & fixed income",
+            "crypto": "cryptocurrency",
+            "real_estate": "real estate investing",
+            "retirement": "retirement planning",
+            "all": "all investing topics",
+        }
+        interests_display = ", ".join(interest_labels.get(i, i) for i in interests) if interests else "not specified"
+
+        # Format time horizon for display
+        time_horizon_labels = {
+            "less_than_1_year": "less than 1 year",
+            "1_to_3_years": "1-3 years",
+            "3_to_5_years": "3-5 years",
+            "5_to_10_years": "5-10 years",
+            "10_plus_years": "10+ years",
+            "not_sure": "not sure yet",
+        }
+        time_horizon_display = time_horizon_labels.get(time_horizon, time_horizon)
+
+        # Sanitize free-text fields
+        safe_goal = _sanitize_text(goal) if goal else "learn about investing"
+        safe_barrier = _sanitize_text(barrier) if barrier else "not specified"
+
+        # Build structured match context
+        match_context = self._build_match_context(interests, user_message)
+
+        # Build match language instructions
+        match_section = ""
+        if match_context["use_match_language"]:
+            direct = ", ".join(interest_labels.get(i, i) for i in match_context["direct_matches"])
+            match_section += f"\nTOPIC MATCH:\nThis question directly relates to the student's interests: {direct}."
+            match_section += "\nLean into this connection — they chose this topic because it excites them. Use at most one match framing per response, and only when natural."
+            if match_context["related_topics"]:
+                related = ", ".join(interest_labels.get(i, i) for i in match_context["related_topics"])
+                match_section += f"\nRelated interests they have: {related}. You can bridge to these naturally if relevant."
+        elif interests:
+            match_section += "\nTOPIC MATCH:\nNo direct match to the student's stated interests for this question. Respond neutrally without forcing a connection to their interests."
+
         system_prompt = f"""You are the LCS Engine AI tutor — a warm, knowledgeable financial literacy guide.
 
 YOUR STUDENT:
 - Persona: {persona}
 - Experience level: {experience}
-- Biggest barrier to investing: {barrier or 'not specified'}
-- Primary goal: {goal}
+- Biggest barrier to investing: {safe_barrier}
+- Primary goal: {safe_goal}
 - Risk comfort: {risk}
 - Preferred learning style: {learning_pref}
+- Time horizon: {time_horizon_display}
+- Interests: {interests_display}
 
 COMMUNICATION STYLE:
 {tone}
@@ -93,7 +231,8 @@ RULES:
 8. End responses with a natural follow-up thought when appropriate — but don't force it every time.
 9. If they seem frustrated or confused, slow down and check in. Ask if they want you to explain differently.
 10. You can use simple examples with made-up numbers. "Imagine you invest $100 in..."
-
+11. Frame concepts through the lens of their time horizon ({time_horizon_display}). Short-horizon learners need to understand liquidity and risk differently than long-horizon learners.
+{match_section}
 ABOUT LCS ENGINE:
 LCS stands for Learn, Choose, Strategize. It's a platform that helps people learn about investing through personalized education, AI conversation, paper trading (simulated), and probability exercises. It is NOT a brokerage. It does NOT manage real money. It's a safe space to learn without risk.
 
@@ -241,7 +380,7 @@ You cannot: give specific buy/sell recommendations, guarantee returns, or provid
             user_profile = self.get_user_profile(user_id)
 
             # 5. Build system prompt and messages
-            system_prompt = self.build_system_prompt(user_profile)
+            system_prompt = self.build_system_prompt(user_profile, message)
             messages = self.build_messages(conversation.messages[:-1], message)  # Exclude the just-saved message
 
             # 6. Stream response from Claude

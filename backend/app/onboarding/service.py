@@ -33,6 +33,7 @@ from .schemas import (
     OnboardingProgressResponse,
     WelcomeResponse,
     PersonalizedTip,
+    DerivedProfileResponse,
 )
 
 
@@ -323,6 +324,148 @@ class OnboardingService:
         return self.db.query(UserProfile).filter(
             UserProfile.user_id == user_id
         ).first()
+
+    def compute_derived_profile(self, profile: UserProfile) -> DerivedProfileResponse:
+        """Compute derived profile fields from raw data. Never stored — always recomputed."""
+        # Label maps for human-readable summaries
+        exp_labels = {
+            "never": "new to investing",
+            "curious": "curious about investing",
+            "beginner": "an early-stage investor",
+            "intermediate": "a regular investor",
+            "advanced": "an experienced investor",
+        }
+        situation_labels = {
+            "student": "a student",
+            "early_career": "early in your career",
+            "mid_career": "mid-career",
+            "career_change": "in a career transition",
+            "pre_retirement": "approaching retirement",
+        }
+        goal_labels = {
+            "learn_basics": "understand how investing works",
+            "start_investing": "start investing for the first time",
+            "grow_wealth": "grow your money over time",
+            "retirement": "plan for retirement",
+            "specific_goal": "reach a specific financial goal",
+        }
+        risk_labels = {
+            "very_conservative": "very conservative",
+            "conservative": "conservative",
+            "moderate": "moderate",
+            "aggressive": "growth-oriented",
+            "very_aggressive": "aggressive",
+        }
+        horizon_labels = {
+            "less_than_1_year": "less than a year",
+            "1_to_3_years": "1-3 years",
+            "3_to_5_years": "3-5 years",
+            "5_to_10_years": "5-10 years",
+            "10_plus_years": "10+ years",
+            "not_sure": "an undecided timeframe",
+        }
+        interest_labels = {
+            "stocks": "individual stocks",
+            "etfs": "ETFs & index funds",
+            "bonds": "bonds & fixed income",
+            "crypto": "cryptocurrency",
+            "real_estate": "real estate",
+            "retirement": "retirement planning",
+            "all": "all investing topics",
+        }
+        learning_labels = {
+            "read": "reading articles and guides",
+            "watch": "watching videos",
+            "do": "hands-on practice",
+            "discuss": "talking things through",
+        }
+        time_labels = {
+            "5_min_daily": "5 minutes a day",
+            "15_min_daily": "15 minutes a day",
+            "30_min_weekly": "30 minutes a week",
+            "1_hour_weekly": "1 hour a week",
+            "flexible": "a flexible schedule",
+        }
+        monthly_labels = {
+            "nothing_yet": "nothing right now",
+            "under_100": "under $100/month",
+            "100_to_500": "$100-$500/month",
+            "500_to_1000": "$500-$1,000/month",
+            "over_1000": "over $1,000/month",
+            "not_sure": "an undecided amount",
+        }
+
+        persona_labels = {
+            "cautious_beginner": "Cautious Beginner",
+            "eager_learner": "Eager Learner",
+            "goal_focused": "Goal Focused",
+            "skeptical_explorer": "Skeptical Explorer",
+            "time_pressed": "Time Pressed",
+            "rebuilding_confidence": "Rebuilding Confidence",
+            "fresh_start": "Fresh Start",
+            "wealth_builder": "Wealth Builder",
+            "income_seeker": "Income Seeker",
+        }
+
+        # Experience summary
+        exp_part = exp_labels.get(profile.experience_level, "getting started")
+        sit_part = situation_labels.get(profile.current_situation, "")
+        experience_summary = f"You're {exp_part}"
+        if sit_part:
+            experience_summary += f" and {sit_part}"
+        experience_summary += "."
+
+        # Goals summary
+        goal_part = goal_labels.get(profile.primary_goal, "learn about investing")
+        horizon_part = horizon_labels.get(profile.time_horizon, "")
+        goals_summary = f"Your main goal is to {goal_part}"
+        if profile.specific_goal_description:
+            goals_summary += f" — {profile.specific_goal_description}"
+        if horizon_part:
+            goals_summary += f", with a time horizon of {horizon_part}"
+        goals_summary += "."
+
+        # Risk summary
+        risk_part = risk_labels.get(profile.risk_tolerance, "moderate")
+        monthly_part = monthly_labels.get(profile.monthly_investable, "")
+        risk_summary = f"Your risk tolerance is {risk_part}"
+        if monthly_part:
+            risk_summary += f", and you can invest {monthly_part}"
+        risk_summary += "."
+
+        # Interests summary
+        interests_summary = None
+        if profile.interests:
+            labels = [interest_labels.get(i, i) for i in profile.interests]
+            if len(labels) == 1:
+                interests_summary = f"You're most interested in {labels[0]}."
+            elif len(labels) == 2:
+                interests_summary = f"You're most interested in {labels[0]} and {labels[1]}."
+            else:
+                interests_summary = f"You're interested in {', '.join(labels[:-1])}, and {labels[-1]}."
+
+        # Learning summary
+        learn_part = learning_labels.get(profile.learning_preference, "learning at your own pace")
+        time_part = time_labels.get(profile.time_commitment, "")
+        learning_summary = f"You prefer {learn_part}"
+        if time_part:
+            learning_summary += f", with {time_part} to dedicate"
+        learning_summary += "."
+
+        # Recompute persona (don't rely on stored value)
+        persona, persona_desc = self._generate_persona(profile)
+
+        return DerivedProfileResponse(
+            persona=persona,
+            persona_label=persona_labels.get(persona, persona),
+            persona_description=persona_desc,
+            recommended_path=profile.recommended_path,
+            experience_summary=experience_summary,
+            goals_summary=goals_summary,
+            risk_summary=risk_summary,
+            interests_summary=interests_summary,
+            learning_summary=learning_summary,
+        )
 
     def get_personalized_welcome(self, user_id: str) -> WelcomeResponse:
         """

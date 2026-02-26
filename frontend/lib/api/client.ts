@@ -240,7 +240,7 @@ class ApiClient {
     });
   }
 
-  async completeOnboarding(): Promise<{ message: string; profile: UserProfile }> {
+  async completeOnboarding(): Promise<{ message: string; profile: unknown }> {
     return this.post("/onboarding/complete");
   }
 
@@ -250,6 +250,15 @@ class ApiClient {
 
   async getProfile(): Promise<UserProfile> {
     return this.get<UserProfile>("/onboarding/profile");
+  }
+
+  async updateProfile(updates: Partial<Pick<
+    import("./types").RawProfile,
+    'primary_goal' | 'specific_goal_description' | 'time_horizon' |
+    'risk_tolerance' | 'monthly_investable' | 'learning_preference' |
+    'time_commitment' | 'interests'
+  >>): Promise<UserProfile> {
+    return this.patch<UserProfile>("/onboarding/profile", updates);
   }
 
   async getWelcome(): Promise<OnboardingWelcome> {

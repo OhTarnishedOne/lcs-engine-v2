@@ -238,7 +238,7 @@ export default function OnboardingPage() {
             transition={{ delay: 0.6 }}
           >
             <Button
-              onClick={() => router.push("/dashboard")}
+              onClick={() => router.push("/profile?welcome=true")}
               className="bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0] btn-accent-glow"
             >
               Start Learning

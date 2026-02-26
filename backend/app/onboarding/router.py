@@ -27,7 +27,10 @@ from .schemas import (
     SaveSingleResponseRequest,
     SaveSectionPathRequest,
     CompleteOnboardingRequest,
+    UpdateProfileRequest,
     UserProfileResponse,
+    RawProfileResponse,
+    FullProfileResponse,
     OnboardingProgressResponse,
     WelcomeResponse,
 )
@@ -37,6 +40,59 @@ router = APIRouter(prefix="/onboarding", tags=["onboarding"])
 
 def get_onboarding_service(db: Session = Depends(get_db)) -> OnboardingService:
     return OnboardingService(db)
+
+
+def _build_user_profile_response(profile) -> UserProfileResponse:
+    """Helper to build UserProfileResponse from a profile model."""
+    return UserProfileResponse(
+        id=profile.id,
+        user_id=profile.user_id,
+        experience_level=profile.experience_level,
+        current_situation=profile.current_situation,
+        has_investment_account=profile.has_investment_account,
+        has_retirement_account=profile.has_retirement_account,
+        barriers=profile.barriers,
+        biggest_barrier=profile.biggest_barrier,
+        primary_goal=profile.primary_goal,
+        specific_goal_description=profile.specific_goal_description,
+        time_horizon=profile.time_horizon,
+        risk_tolerance=profile.risk_tolerance,
+        loss_reaction=profile.loss_reaction,
+        monthly_investable=profile.monthly_investable,
+        learning_preference=profile.learning_preference,
+        time_commitment=profile.time_commitment,
+        interests=profile.interests,
+        persona=profile.persona,
+        persona_description=profile.persona_description,
+        recommended_path=profile.recommended_path,
+        onboarding_completed=profile.onboarding_completed,
+        onboarding_completed_at=profile.onboarding_completed_at,
+    )
+
+
+def _build_raw_profile_response(profile) -> RawProfileResponse:
+    """Helper to build RawProfileResponse from a profile model."""
+    return RawProfileResponse(
+        id=profile.id,
+        user_id=profile.user_id,
+        experience_level=profile.experience_level,
+        current_situation=profile.current_situation,
+        has_investment_account=profile.has_investment_account,
+        has_retirement_account=profile.has_retirement_account,
+        barriers=profile.barriers,
+        biggest_barrier=profile.biggest_barrier,
+        primary_goal=profile.primary_goal,
+        specific_goal_description=profile.specific_goal_description,
+        time_horizon=profile.time_horizon,
+        risk_tolerance=profile.risk_tolerance,
+        loss_reaction=profile.loss_reaction,
+        monthly_investable=profile.monthly_investable,
+        learning_preference=profile.learning_preference,
+        time_commitment=profile.time_commitment,
+        interests=profile.interests,
+        onboarding_completed=profile.onboarding_completed,
+        onboarding_completed_at=profile.onboarding_completed_at,
+    )
 
 
 @router.get("/questions", response_model=OnboardingQuestionsResponse)
@@ -153,30 +209,7 @@ def complete_onboarding(
         user_id=current_user.id,
         all_responses=responses
     )
-    return UserProfileResponse(
-        id=profile.id,
-        user_id=profile.user_id,
-        experience_level=profile.experience_level,
-        current_situation=profile.current_situation,
-        has_investment_account=profile.has_investment_account,
-        has_retirement_account=profile.has_retirement_account,
-        barriers=profile.barriers,
-        biggest_barrier=profile.biggest_barrier,
-        primary_goal=profile.primary_goal,
-        specific_goal_description=profile.specific_goal_description,
-        time_horizon=profile.time_horizon,
-        risk_tolerance=profile.risk_tolerance,
-        loss_reaction=profile.loss_reaction,
-        monthly_investable=profile.monthly_investable,
-        learning_preference=profile.learning_preference,
-        time_commitment=profile.time_commitment,
-        interests=profile.interests,
-        persona=profile.persona,
-        persona_description=profile.persona_description,
-        recommended_path=profile.recommended_path,
-        onboarding_completed=profile.onboarding_completed,
-        onboarding_completed_at=profile.onboarding_completed_at
-    )
+    return _build_user_profile_response(profile)
 
 
 @router.get("/progress", response_model=OnboardingProgressResponse)
@@ -188,41 +221,50 @@ def get_progress(
     return service.get_onboarding_progress(current_user.id)
 
 
-@router.get("/profile", response_model=UserProfileResponse)
+@router.get("/profile", response_model=FullProfileResponse)
 def get_profile(
     current_user: User = Depends(get_current_user),
     service: OnboardingService = Depends(get_onboarding_service)
-) -> UserProfileResponse:
-    """Get user's completed profile."""
+) -> FullProfileResponse:
+    """Get user's profile with raw fields and derived summaries."""
     profile = service.get_profile(current_user.id)
     if not profile:
         from ..common.errors import NotFoundError
         raise NotFoundError("Profile not found. Please complete onboarding first.")
 
-    return UserProfileResponse(
-        id=profile.id,
-        user_id=profile.user_id,
-        experience_level=profile.experience_level,
-        current_situation=profile.current_situation,
-        has_investment_account=profile.has_investment_account,
-        has_retirement_account=profile.has_retirement_account,
-        barriers=profile.barriers,
-        biggest_barrier=profile.biggest_barrier,
-        primary_goal=profile.primary_goal,
-        specific_goal_description=profile.specific_goal_description,
-        time_horizon=profile.time_horizon,
-        risk_tolerance=profile.risk_tolerance,
-        loss_reaction=profile.loss_reaction,
-        monthly_investable=profile.monthly_investable,
-        learning_preference=profile.learning_preference,
-        time_commitment=profile.time_commitment,
-        interests=profile.interests,
-        persona=profile.persona,
-        persona_description=profile.persona_description,
-        recommended_path=profile.recommended_path,
-        onboarding_completed=profile.onboarding_completed,
-        onboarding_completed_at=profile.onboarding_completed_at
-    )
+    raw = _build_raw_profile_response(profile)
+    derived = service.compute_derived_profile(profile)
+    return FullProfileResponse(raw=raw, derived=derived)
+
+
+@router.patch("/profile", response_model=FullProfileResponse)
+def update_profile(
+    request: UpdateProfileRequest,
+    current_user: User = Depends(get_current_user),
+    service: OnboardingService = Depends(get_onboarding_service)
+) -> FullProfileResponse:
+    """Update editable raw profile fields. Recomputes derived profile."""
+    profile = service.get_profile(current_user.id)
+    if not profile:
+        from ..common.errors import NotFoundError
+        raise NotFoundError("Profile not found. Please complete onboarding first.")
+
+    updates = request.model_dump(exclude_unset=True)
+    for field, value in updates.items():
+        setattr(profile, field, value)
+
+    # Recompute persona after raw field changes
+    persona, persona_desc = service._generate_persona(profile)
+    profile.persona = persona
+    profile.persona_description = persona_desc
+
+    db = service.db
+    db.commit()
+    db.refresh(profile)
+
+    raw = _build_raw_profile_response(profile)
+    derived = service.compute_derived_profile(profile)
+    return FullProfileResponse(raw=raw, derived=derived)
 
 
 @router.get("/welcome", response_model=WelcomeResponse)

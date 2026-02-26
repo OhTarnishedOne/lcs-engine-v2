@@ -229,8 +229,10 @@ def test_get_profile_after_onboarding(client):
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["experience_level"] == "beginner"
-    assert data["current_situation"] == "student"
+    assert data["raw"]["experience_level"] == "beginner"
+    assert data["raw"]["current_situation"] == "student"
+    assert data["derived"]["persona"] is not None
+    assert data["derived"]["experience_summary"] is not None
 
 
 def test_personalized_welcome(client):

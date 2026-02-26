@@ -25,20 +25,59 @@ export interface User {
   created_at: string;
 }
 
-// Profile
-export interface UserProfile {
+// Profile — raw DB fields
+export interface RawProfile {
   id: string;
   user_id: string;
-  persona: string | null;
+
+  // Section 1
   experience_level: string | null;
+  current_situation: string | null;
+  has_investment_account: boolean | null;
+  has_retirement_account: boolean | null;
+
+  // Section 2
+  barriers: string[] | null;
   biggest_barrier: string | null;
+
+  // Section 3
   primary_goal: string | null;
+  specific_goal_description: string | null;
+  time_horizon: string | null;
+
+  // Section 4
   risk_tolerance: string | null;
+  loss_reaction: string | null;
+  monthly_investable: string | null;
+
+  // Section 5
   learning_preference: string | null;
-  recommended_path: string | null;
+  time_commitment: string | null;
+  interests: string[] | null;
+
+  // Status
   onboarding_completed: boolean;
-  created_at: string;
-  updated_at: string;
+  onboarding_completed_at: string | null;
+}
+
+// Profile — computed server-side summaries
+export interface DerivedProfile {
+  persona: string | null;
+  persona_label: string | null;
+  persona_description: string | null;
+  recommended_path: string | null;
+
+  experience_summary: string | null;
+  goals_summary: string | null;
+  risk_summary: string | null;
+  interests_summary: string | null;
+  learning_summary: string | null;
+}
+
+// Combined profile response
+export interface UserProfile {
+  raw: RawProfile;
+  derived: DerivedProfile;
 }
 
 // Onboarding

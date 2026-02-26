@@ -75,8 +75,9 @@ export default function DashboardPage() {
   });
 
   const isOnboardingComplete = progress?.is_complete ?? false;
-  const userName = profile?.persona
-    ? profile.persona.charAt(0).toUpperCase() + profile.persona.slice(1)
+  const personaLabel = profile?.derived?.persona_label;
+  const userName = personaLabel
+    ? personaLabel
     : user?.email?.split("@")[0] || "there";
 
   return (
