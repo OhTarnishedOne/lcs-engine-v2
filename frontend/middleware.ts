@@ -14,11 +14,7 @@ export function middleware(request: NextRequest) {
 
   // We can't check localStorage from middleware, so we rely on client-side auth
   // The dashboard layout handles the actual redirect if not authenticated
-
-  // Redirect root to dashboard or login
-  if (pathname === "/") {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
+  // The landing page (/) handles its own auth check and redirects authenticated users to /dashboard
 
   return NextResponse.next();
 }
