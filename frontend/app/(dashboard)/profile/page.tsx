@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -76,6 +77,20 @@ export default function ProfilePage() {
     queryFn: () => api.getProfile(),
   });
 
+  const { data: progress, isLoading: progressLoading } = useQuery({
+    queryKey: ["onboarding-progress"],
+    queryFn: () => api.getOnboardingProgress(),
+  });
+
+  const isOnboardingComplete = progress?.is_complete ?? false;
+
+  // Redirect to onboarding if not completed
+  useEffect(() => {
+    if (!progressLoading && !isOnboardingComplete) {
+      router.replace("/onboarding");
+    }
+  }, [progressLoading, isOnboardingComplete, router]);
+
   if (isLoading) {
     return (
       <div className="mx-auto max-w-3xl space-y-6">
@@ -98,33 +113,22 @@ export default function ProfilePage() {
   }
 
   if (error || !profile) {
-    const isApiError = !!error;
     return (
       <div className="mx-auto max-w-3xl">
         <Card className="border-gray-800 bg-[#111827] p-6">
           <CardContent className="p-0 text-center">
             <p className="text-gray-400">
-              {isApiError
+              {error
                 ? "Something went wrong loading your profile. Please try again."
                 : "Complete onboarding to see your profile."}
             </p>
-            {isApiError ? (
-              <Button
-                onClick={() => window.location.reload()}
-                className="mt-4 bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0]"
-              >
-                Retry
-                <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
-            ) : (
-              <Button
-                onClick={() => (window.location.href = "/onboarding")}
-                className="mt-4 bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0]"
-              >
-                Start Onboarding
-                <ChevronRight className="ml-1 h-4 w-4" />
-              </Button>
-            )}
+            <Button
+              onClick={() => error ? window.location.reload() : router.push("/onboarding")}
+              className="mt-4 bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0]"
+            >
+              {error ? "Retry" : "Start Onboarding"}
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
           </CardContent>
         </Card>
       </div>

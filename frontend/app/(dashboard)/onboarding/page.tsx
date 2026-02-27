@@ -50,6 +50,13 @@ export default function OnboardingPage() {
   // Derive showWelcome from progress data or just-completed state
   const showWelcome = (progressData?.is_complete ?? false) || completedNow;
 
+  // If onboarding was already completed in a prior session, redirect to /dashboard
+  useEffect(() => {
+    if (progressData?.is_complete && !completedNow) {
+      router.replace("/dashboard");
+    }
+  }, [progressData?.is_complete, completedNow, router]);
+
   // Resume section index during render (React-recommended adjust-state-during-render pattern)
   if (progressData && sections && !hasResumed) {
     setHasResumed(true);
@@ -238,7 +245,7 @@ export default function OnboardingPage() {
             transition={{ delay: 0.6 }}
           >
             <Button
-              onClick={() => router.push("/dashboard")}
+              onClick={() => router.replace("/dashboard")}
               className="bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0] btn-accent-glow"
             >
               Start Learning
