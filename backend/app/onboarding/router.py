@@ -8,15 +8,21 @@ Endpoints for the onboarding flow:
 - Get progress
 - Get profile
 - Get personalized welcome
+- Conversational AI onboarding (chat, complete, skip)
 """
 
+import json
+import logging
+from datetime import datetime, UTC
 from typing import Optional
 
 from fastapi import APIRouter, Depends
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from ..deps import get_db, get_current_user
-from ..db.models import User
+from ..deps import get_db, get_current_user, get_ai_client
+from ..db.models import User, UserProfile
+from ..integrations import ResilientAIClient
 from ..config.onboarding_questions import get_total_questions
 from .service import OnboardingService
 from .schemas import (
@@ -33,7 +39,19 @@ from .schemas import (
     FullProfileResponse,
     OnboardingProgressResponse,
     WelcomeResponse,
+    OnboardingChatRequest,
+    OnboardingChatCompleteRequest,
+    ExtractedProfile,
 )
+from .coverage import compute_coverage, get_completion_status, REQUIRED_TOPICS
+from .prompts import (
+    ONBOARDING_CHAT_SYSTEM_PROMPT,
+    ONBOARDING_EXTRACTION_PROMPT,
+    COMPLETION_INSTRUCTION_CONTINUE,
+    COMPLETION_INSTRUCTION_WRAP_UP,
+)
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/onboarding", tags=["onboarding"])
 
@@ -289,3 +307,235 @@ def get_welcome(
     Only available after completing onboarding.
     """
     return service.get_personalized_welcome(current_user.id)
+
+
+# =============================================================
+# Conversational AI Onboarding Endpoints
+# =============================================================
+
+@router.post("/chat")
+async def onboarding_chat(
+    request: OnboardingChatRequest,
+    current_user: User = Depends(get_current_user),
+    ai_client: ResilientAIClient = Depends(get_ai_client),
+):
+    """
+    Conversational onboarding chat endpoint (streaming SSE).
+
+    Send the full message history and receive a streamed AI response.
+    The AI tutor asks natural questions to learn about the user.
+
+    Response format:
+    ```
+    data: {"type": "start"}
+    data: {"type": "token", "content": "Hello"}
+    data: {"type": "done", "completion_status": "continue"|"wrap_up"}
+    ```
+    """
+    messages = request.messages
+
+    # Compute topic coverage from user messages
+    coverage = compute_coverage(messages)
+    turn_count = sum(1 for m in messages if m.get("role") == "user")
+    completion_status = get_completion_status(coverage, turn_count)
+
+    # Build dynamic system prompt
+    covered = [t for t in REQUIRED_TOPICS if coverage.get(t, False)]
+    uncovered = [t for t in REQUIRED_TOPICS if not coverage.get(t, False)]
+
+    completion_instruction = (
+        COMPLETION_INSTRUCTION_WRAP_UP
+        if completion_status == "wrap_up"
+        else COMPLETION_INSTRUCTION_CONTINUE
+    )
+
+    system_prompt = ONBOARDING_CHAT_SYSTEM_PROMPT.format(
+        uncovered_topics=", ".join(uncovered) if uncovered else "none",
+        covered_topics=", ".join(covered) if covered else "none",
+        completion_instruction=completion_instruction,
+    )
+
+    # Format messages for the AI client (only role + content)
+    ai_messages = [
+        {"role": m["role"], "content": m["content"]}
+        for m in messages
+        if m.get("role") in ("user", "assistant") and m.get("content")
+    ]
+
+    async def event_stream():
+        try:
+            yield f"data: {json.dumps({'type': 'start'})}\n\n"
+
+            async for chunk in ai_client.chat_stream(
+                messages=ai_messages,
+                system_prompt=system_prompt,
+                max_tokens=512,
+            ):
+                yield f"data: {json.dumps({'type': 'token', 'content': chunk})}\n\n"
+
+            yield f"data: {json.dumps({'type': 'done', 'completion_status': completion_status})}\n\n"
+        except Exception as e:
+            logger.error(f"Onboarding chat stream error: {type(e).__name__}: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'content': 'Something went wrong. Please try again.'})}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+# Map extraction values to UserProfile DB values
+EXPERIENCE_LEVEL_MAP = {
+    "none": "never",
+    "beginner": "beginner",
+    "intermediate": "intermediate",
+    "advanced": "advanced",
+}
+
+RISK_TOLERANCE_MAP = {
+    "conservative": "conservative",
+    "moderate": "moderate",
+    "aggressive": "aggressive",
+}
+
+
+@router.post("/chat/complete")
+async def onboarding_chat_complete(
+    request: OnboardingChatCompleteRequest,
+    current_user: User = Depends(get_current_user),
+    ai_client: ResilientAIClient = Depends(get_ai_client),
+    db: Session = Depends(get_db),
+):
+    """
+    Extract structured profile from onboarding conversation transcript.
+
+    Calls Claude to extract profile data, validates it, creates UserProfile,
+    and marks onboarding as complete.
+    """
+    try:
+        # Build transcript text from messages
+        transcript_lines = []
+        for msg in request.messages:
+            role = msg.get("role", "unknown")
+            content = msg.get("content", "")
+            transcript_lines.append(f"{role}: {content}")
+        transcript_text = "\n".join(transcript_lines)
+
+        # Call AI to extract profile
+        extracted_data = await ai_client.chat_json(
+            messages=[{"role": "user", "content": transcript_text}],
+            system_prompt=ONBOARDING_EXTRACTION_PROMPT,
+        )
+
+        # Validate with Pydantic (coerces invalid values to defaults)
+        extracted = ExtractedProfile(**extracted_data)
+
+        # Get or create UserProfile
+        profile = db.query(UserProfile).filter(
+            UserProfile.user_id == current_user.id
+        ).first()
+
+        if not profile:
+            profile = UserProfile(user_id=current_user.id)
+            db.add(profile)
+
+        # Map extracted fields to DB model
+        profile.experience_level = EXPERIENCE_LEVEL_MAP.get(
+            extracted.experience_level, "beginner"
+        )
+        profile.primary_goal = extracted.primary_goal
+        profile.risk_tolerance = extracted.risk_tolerance
+        profile.interests = extracted.interests
+        profile.learning_preference = extracted.learning_preference
+
+        # Set reasonable defaults for fields not extracted via chat
+        profile.barriers = ["none"]
+        profile.biggest_barrier = None
+        profile.time_horizon = "3_to_5_years"
+        profile.monthly_investable = "not_sure"
+        profile.loss_reaction = "wait_and_see"
+        profile.current_situation = None
+        profile.time_commitment = "flexible"
+        profile.has_investment_account = False
+        profile.has_retirement_account = False
+
+        # Generate persona using existing service logic
+        service = OnboardingService(db)
+        persona, persona_desc = service._generate_persona(profile)
+        profile.persona = persona
+        profile.persona_description = persona_desc
+
+        # Mark onboarding complete
+        profile.onboarding_completed = True
+        profile.onboarding_completed_at = datetime.now(UTC)
+
+        db.commit()
+        db.refresh(profile)
+
+        # Build response dict
+        profile_dict = {
+            "experience_level": profile.experience_level,
+            "primary_goal": profile.primary_goal,
+            "risk_tolerance": profile.risk_tolerance,
+            "interests": profile.interests,
+            "learning_preference": profile.learning_preference,
+            "persona": profile.persona,
+            "additional_context": extracted.additional_context,
+        }
+
+        return {"ok": True, "profile": profile_dict}
+
+    except Exception as e:
+        logger.error(f"Onboarding extraction failed: {type(e).__name__}: {e}")
+        return {"ok": False, "error": "extraction_failed"}
+
+
+@router.post("/skip")
+async def skip_onboarding(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Skip onboarding and create profile with safe defaults.
+    """
+    profile = db.query(UserProfile).filter(
+        UserProfile.user_id == current_user.id
+    ).first()
+
+    if not profile:
+        profile = UserProfile(user_id=current_user.id)
+        db.add(profile)
+
+    # Set safe defaults
+    profile.experience_level = "beginner"
+    profile.primary_goal = "learn_basics"
+    profile.risk_tolerance = "moderate"
+    profile.interests = ["stocks", "etfs"]
+    profile.learning_preference = "do"
+    profile.barriers = ["none"]
+    profile.biggest_barrier = None
+    profile.time_horizon = "3_to_5_years"
+    profile.monthly_investable = "not_sure"
+    profile.loss_reaction = "wait_and_see"
+    profile.current_situation = None
+    profile.time_commitment = "flexible"
+    profile.has_investment_account = False
+    profile.has_retirement_account = False
+
+    # Generate persona
+    service = OnboardingService(db)
+    persona, persona_desc = service._generate_persona(profile)
+    profile.persona = persona
+    profile.persona_description = persona_desc
+
+    profile.onboarding_completed = True
+    profile.onboarding_completed_at = datetime.now(UTC)
+
+    db.commit()
+
+    return {"ok": True}

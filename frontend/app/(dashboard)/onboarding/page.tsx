@@ -1,409 +1,397 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
-import { Check, ChevronRight, Sparkles, ArrowRight } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { motion } from "framer-motion";
+import { Send, Bot, User, Loader2 } from "lucide-react";
 
 import { api } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
-import { SkeletonCard } from "@/components/shared";
-import type { OnboardingSection } from "@/lib/api/types";
+import { Input } from "@/components/ui/input";
 import { trackEvent } from "@/lib/analytics";
+import OnboardingFormFallback from "./form-fallback";
+
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  isStreaming?: boolean;
+}
 
 export default function OnboardingPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [sectionResponses, setSectionResponses] = useState<Record<string, string>>({});
-  const [completedNow, setCompletedNow] = useState(false);
-  const [hasResumed, setHasResumed] = useState(false);
-  const advanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputValue, setInputValue] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [completionStatus, setCompletionStatus] = useState<"continue" | "wrap_up" | null>(null);
+  const [showFallbackForm, setShowFallbackForm] = useState(false);
+  const [isExtracting, setIsExtracting] = useState(false);
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const assistantContentRef = useRef("");
+  const rafIdRef = useRef<number>(0);
+  const initialGreetingSent = useRef(false);
   const onboardingTrackedRef = useRef(false);
 
-  useEffect(() => {
-    if (!onboardingTrackedRef.current) {
-      onboardingTrackedRef.current = true;
-      trackEvent("onboarding_started");
-    }
-  }, []);
-
-  // Fetch questions
-  const { data: questionsData, isLoading } = useQuery({
-    queryKey: ["onboarding-questions"],
-    queryFn: () => api.getOnboardingQuestions(),
-  });
-  const sections: OnboardingSection[] | undefined = Array.isArray(questionsData?.sections)
-    ? questionsData.sections
-    : undefined;
-
-  // Fetch onboarding progress for resumption
+  // Check if already completed — redirect to dashboard
   const { data: progressData } = useQuery({
     queryKey: ["onboarding-progress"],
     queryFn: () => api.getOnboardingProgress(),
   });
 
-  // Derive showWelcome from progress data or just-completed state
-  const showWelcome = (progressData?.is_complete ?? false) || completedNow;
-
-  // If onboarding was already completed in a prior session, redirect to /dashboard
   useEffect(() => {
-    if (progressData?.is_complete && !completedNow) {
+    if (progressData?.is_complete) {
       router.replace("/dashboard");
     }
-  }, [progressData?.is_complete, completedNow, router]);
+  }, [progressData?.is_complete, router]);
 
-  // Resume section index during render (React-recommended adjust-state-during-render pattern)
-  if (progressData && sections && !hasResumed) {
-    setHasResumed(true);
-    if (!progressData.is_complete && progressData.current_section) {
-      const idx = sections.findIndex((s) => s.section === progressData.current_section);
-      if (idx >= 0) {
-        setCurrentSectionIndex(idx);
-        setCurrentQuestionIndex(0);
+  useEffect(() => {
+    if (!onboardingTrackedRef.current) {
+      onboardingTrackedRef.current = true;
+      trackEvent("onboarding_chat_started");
+    }
+  }, []);
+
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // SSE stream consumer — reuses exact pattern from chat page
+  const consumeStream = useCallback(async (response: Response): Promise<string | null> => {
+    const reader = response.body?.getReader();
+    if (!reader) return null;
+
+    const decoder = new TextDecoder();
+    let sseBuffer = "";
+    let resultCompletionStatus: string | null = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      sseBuffer += decoder.decode(value, { stream: true });
+      const lines = sseBuffer.split("\n");
+      sseBuffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        try {
+          const data = JSON.parse(line.slice(6));
+
+          if (data.type === "token") {
+            assistantContentRef.current += data.content;
+            if (!rafIdRef.current) {
+              rafIdRef.current = requestAnimationFrame(() => {
+                rafIdRef.current = 0;
+                const content = assistantContentRef.current;
+                setMessages((prev) => {
+                  const newMessages = [...prev];
+                  const last = newMessages[newMessages.length - 1];
+                  if (last?.role === "assistant") last.content = content;
+                  return newMessages;
+                });
+              });
+            }
+          } else if (data.type === "done") {
+            resultCompletionStatus = data.completion_status || null;
+            if (rafIdRef.current) {
+              cancelAnimationFrame(rafIdRef.current);
+              rafIdRef.current = 0;
+            }
+            const finalContent = assistantContentRef.current;
+            setMessages((prev) => {
+              const newMessages = [...prev];
+              const last = newMessages[newMessages.length - 1];
+              if (last?.role === "assistant") {
+                last.content = finalContent;
+                last.isStreaming = false;
+              }
+              return newMessages;
+            });
+          } else if (data.type === "error") {
+            throw new Error(data.content || "Stream error");
+          }
+        } catch (e) {
+          if (e instanceof Error && e.message !== "Stream error") continue;
+          throw e;
+        }
       }
     }
-  }
 
-  // Fetch welcome message (after completion)
-  const { data: welcome } = useQuery({
-    queryKey: ["onboarding-welcome"],
-    queryFn: () => api.getWelcome(),
-    enabled: showWelcome,
-  });
+    return resultCompletionStatus;
+  }, []);
 
-  // Submit section responses
-  const submitMutation = useMutation({
-    mutationFn: ({ section, responses }: { section: number; responses: Record<string, string> }) =>
-      api.submitSectionResponses(section, responses),
-    onSuccess: (data) => {
-      trackEvent("onboarding_step_completed", { section: currentSectionIndex + 1 });
-      queryClient.invalidateQueries({ queryKey: ["onboarding-progress"] });
-      if (data.is_complete) {
-        completeMutation.mutate();
-      } else if (sections && currentSectionIndex < sections.length - 1) {
-        setCurrentSectionIndex((prev) => prev + 1);
-        setCurrentQuestionIndex(0);
-        setSectionResponses({});
+  // Send initial greeting on mount (empty messages = AI introduces itself)
+  useEffect(() => {
+    if (initialGreetingSent.current || progressData?.is_complete) return;
+    initialGreetingSent.current = true;
+
+    const sendGreeting = async () => {
+      setIsStreaming(true);
+      assistantContentRef.current = "";
+
+      // Add placeholder for assistant greeting
+      setMessages([{ role: "assistant", content: "", isStreaming: true }]);
+
+      try {
+        const response = await api.sendOnboardingChat([]);
+        const status = await consumeStream(response);
+        if (status) setCompletionStatus(status as "continue" | "wrap_up");
+      } catch {
+        setMessages([{
+          role: "assistant",
+          content: "Hey there! I'm excited to help you get started with investing. Tell me a bit about yourself — have you done any investing before?",
+          isStreaming: false,
+        }]);
+      } finally {
+        setIsStreaming(false);
+        inputRef.current?.focus();
       }
-    },
-  });
+    };
 
-  // Complete onboarding
-  const completeMutation = useMutation({
-    mutationFn: () => api.completeOnboarding(),
-    onSuccess: () => {
-      trackEvent("onboarding_completed");
-      queryClient.invalidateQueries({ queryKey: ["profile"] });
-      queryClient.invalidateQueries({ queryKey: ["onboarding-progress"] });
-      setCompletedNow(true);
-    },
-  });
+    sendGreeting();
+  }, [progressData?.is_complete, consumeStream]);
 
-  const currentSection = sections?.[currentSectionIndex];
-  const currentQuestion = currentSection?.questions[currentQuestionIndex];
-  const totalQuestions = sections?.reduce((acc, s) => acc + s.questions.length, 0) || 0;
-  const answeredQuestions = sections?.slice(0, currentSectionIndex).reduce((acc, s) => acc + s.questions.length, 0) || 0;
-  const progress = totalQuestions > 0 ? (answeredQuestions + currentQuestionIndex) / totalQuestions : 0;
+  // Handle extraction after wrap_up
+  const handleExtraction = useCallback(async (allMessages: ChatMessage[]) => {
+    setIsExtracting(true);
+    trackEvent("onboarding_chat_extracting");
 
-  const advanceQuestion = (questionId: string, value: string) => {
-    if (currentSection && currentQuestionIndex < currentSection.questions.length - 1) {
-      setCurrentQuestionIndex((prev) => prev + 1);
-    } else if (currentSection) {
-      // Submit section
-      submitMutation.mutate({
-        section: currentSection.section,
-        responses: { ...sectionResponses, [questionId]: value },
+    try {
+      const transcript = allMessages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+      const result = await api.completeOnboardingChat(transcript);
+
+      if (result.ok) {
+        trackEvent("onboarding_completed", { method: "chat" });
+        queryClient.invalidateQueries({ queryKey: ["onboarding-progress"] });
+        queryClient.invalidateQueries({ queryKey: ["profile"] });
+        router.replace("/profile?welcome=true");
+      } else {
+        // Extraction failed — offer form fallback
+        trackEvent("onboarding_chat_extraction_failed");
+        setShowFallbackForm(true);
+      }
+    } catch {
+      setShowFallbackForm(true);
+    } finally {
+      setIsExtracting(false);
+    }
+  }, [queryClient, router]);
+
+  // Send user message
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || isStreaming || isExtracting) return;
+
+    const userMessage = inputValue.trim();
+    setInputValue("");
+    setIsStreaming(true);
+    assistantContentRef.current = "";
+
+    const updatedMessages: ChatMessage[] = [
+      ...messages,
+      { role: "user", content: userMessage },
+    ];
+    setMessages([...updatedMessages, { role: "assistant", content: "", isStreaming: true }]);
+
+    try {
+      const apiMessages = updatedMessages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+      const response = await api.sendOnboardingChat(apiMessages);
+      const status = await consumeStream(response);
+
+      if (status) {
+        setCompletionStatus(status as "continue" | "wrap_up");
+
+        // If wrap_up, trigger extraction after a brief pause
+        if (status === "wrap_up") {
+          // Get final messages including the wrap-up response
+          setTimeout(() => {
+            setMessages((currentMessages) => {
+              handleExtraction(currentMessages);
+              return currentMessages;
+            });
+          }, 1500);
+        }
+      }
+    } catch {
+      setMessages((prev) => {
+        const newMessages = [...prev];
+        const last = newMessages[newMessages.length - 1];
+        if (last?.role === "assistant") {
+          last.content = "Sorry, something went wrong. Please try again.";
+          last.isStreaming = false;
+        }
+        return newMessages;
       });
+    } finally {
+      setIsStreaming(false);
     }
   };
 
-  const handleSelectOption = (questionId: string, value: string) => {
-    // Cancel any pending advance so only the latest click takes effect
-    if (advanceTimerRef.current) {
-      clearTimeout(advanceTimerRef.current);
+  // Handle skip
+  const handleSkip = async () => {
+    try {
+      await api.skipOnboarding();
+      trackEvent("onboarding_skipped");
+      queryClient.invalidateQueries({ queryKey: ["onboarding-progress"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      router.replace("/dashboard");
+    } catch {
+      // Silently fail — user can try again
     }
-
-    // Replace (not accumulate) the value for this question
-    setSectionResponses((prev) => ({ ...prev, [questionId]: value }));
-
-    // Auto-advance after a short delay
-    advanceTimerRef.current = setTimeout(() => {
-      advanceTimerRef.current = null;
-      advanceQuestion(questionId, value);
-    }, 300);
   };
 
-  const handleTextSubmit = () => {
-    if (!currentQuestion) return;
-    const value = (sectionResponses[currentQuestion.key] || "").trim();
-    if (currentQuestion.required && !value) return;
-    setSectionResponses((prev) => ({ ...prev, [currentQuestion.key]: value }));
-    advanceQuestion(currentQuestion.key, value);
-  };
-
-  if (isLoading) {
+  // If extraction failed, show fallback form
+  if (showFallbackForm) {
     return (
-      <div className="mx-auto max-w-2xl">
-        <SkeletonCard lines={5} />
+      <div>
+        <div className="mx-auto mb-4 max-w-2xl rounded-lg border border-yellow-600/30 bg-yellow-900/20 p-3 text-center text-sm text-yellow-300">
+          Let&apos;s try the quick form instead — it only takes 30 seconds.
+        </div>
+        <OnboardingFormFallback />
       </div>
     );
   }
 
-  // Welcome screen after completion
-  if (showWelcome) {
+  // Extracting state
+  if (isExtracting) {
     return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="mx-auto max-w-2xl"
-      >
-        <div className="rounded-xl border border-gray-800 bg-[#111827] p-8 text-center">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", delay: 0.2 }}
-            className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-[#00D4AA]/20"
-          >
-            <Sparkles className="h-8 w-8 text-[#00D4AA]" />
-          </motion.div>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="mb-2 text-2xl font-bold text-white"
-          >
-            {welcome?.greeting || "Welcome! We're glad you're here."}
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="mb-2 text-gray-300"
-          >
-            {welcome?.acknowledgment || ""}
-          </motion.p>
-
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.45 }}
-            className="mb-6 text-gray-400"
-          >
-            {welcome?.encouragement || "Your personalized learning journey begins now."}
-          </motion.p>
-
-          {welcome?.personalized_tips && welcome.personalized_tips.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="mb-6 rounded-lg bg-[#1A2942]/50 p-4 text-left"
-            >
-              <p className="mb-3 text-sm font-medium text-gray-300">
-                Personalized tips for you:
-              </p>
-              <ul className="space-y-3">
-                {welcome.personalized_tips.map((tip, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#00D4AA]" />
-                    <div>
-                      <p className="font-medium text-gray-200">{tip.title}</p>
-                      <p className="text-gray-400">{tip.description}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-          )}
-
-          {welcome?.recommended_action_label && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.55 }}
-              className="mb-6 rounded-lg border border-[#00D4AA]/20 bg-[#00D4AA]/5 p-4"
-            >
-              <p className="text-sm font-medium text-[#00D4AA]">
-                {welcome.recommended_action_label}
-              </p>
-              <p className="mt-1 text-sm text-gray-400">
-                {welcome.recommended_action_description}
-              </p>
-            </motion.div>
-          )}
-
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-          >
-            <Button
-              onClick={() => router.replace("/dashboard")}
-              className="bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0] btn-accent-glow"
-            >
-              Start Learning
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </motion.div>
-        </div>
-      </motion.div>
+      <div className="flex h-[calc(100vh-8rem)] items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center"
+        >
+          <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-[#00D4AA]" />
+          <h2 className="mb-2 text-lg font-semibold text-white">Building your profile...</h2>
+          <p className="text-sm text-gray-400">Personalizing your learning experience</p>
+        </motion.div>
+      </div>
     );
-  }
-
-  if (!currentSection || !currentQuestion) {
-    return null;
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
-      {/* Progress bar */}
-      <div className="mb-8">
-        <div className="mb-2 flex items-center justify-between text-sm">
-          <span className="text-gray-400">
-            Section {currentSectionIndex + 1} of {sections?.length}
-          </span>
-          <span className="text-gray-400">
-            {Math.round(progress * 100)}% complete
-          </span>
-        </div>
-        <div className="h-2 overflow-hidden rounded-full bg-gray-800">
-          <motion.div
-            className="h-full bg-[#00D4AA]"
-            initial={{ width: 0 }}
-            animate={{ width: `${progress * 100}%` }}
-            transition={{ duration: 0.3 }}
-          />
+    <>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0; }
+        }
+        @keyframes pulse-dot {
+          0%, 100% { opacity: 0.4; }
+          50% { opacity: 1; }
+        }
+      ` }} />
+
+      <div className="mx-auto flex h-[calc(100vh-8rem)] max-w-2xl flex-col">
+        {/* Header */}
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h1 className="text-lg font-semibold text-white">Getting to know you</h1>
+            <span
+              className="inline-block h-2 w-2 rounded-full bg-[#00D4AA]"
+              style={{ animation: "pulse-dot 2s ease-in-out infinite" }}
+            />
+          </div>
         </div>
 
-        {/* Section indicators */}
-        <div className="mt-4 flex justify-center gap-2">
-          {sections?.map((section, i) => (
-            <div
-              key={section.section}
-              className={`h-2 w-8 rounded-full transition-colors ${
-                i < currentSectionIndex
-                  ? "bg-[#00D4AA]"
-                  : i === currentSectionIndex
-                  ? "bg-[#00D4AA]/50"
-                  : "bg-gray-700"
-              }`}
+        {/* Messages area */}
+        <div className="flex-1 overflow-y-auto rounded-xl border border-gray-800 bg-[#111827] p-4 lg:p-6">
+          <div className="space-y-6">
+            {messages.map((message, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`flex gap-4 ${
+                  message.role === "user" ? "justify-end" : "justify-start"
+                }`}
+              >
+                {message.role === "assistant" && (
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1A2942]">
+                    <Bot className="h-4 w-4 text-[#00D4AA]" />
+                  </div>
+                )}
+                <div
+                  className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                    message.role === "user"
+                      ? "bg-[#00D4AA]/20 text-gray-100"
+                      : "bg-[#1A2942] text-gray-200"
+                  }`}
+                >
+                  <p className="whitespace-pre-wrap text-base leading-relaxed">
+                    {message.content}
+                    {message.isStreaming && (
+                      <span
+                        className="ml-0.5 inline-block w-0.5 h-[1.1em] bg-[#00D4AA] align-middle"
+                        style={{ animation: "blink 1s steps(2) infinite" }}
+                      />
+                    )}
+                  </p>
+                </div>
+                {message.role === "user" && (
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#00D4AA]/20">
+                    <User className="h-4 w-4 text-[#00D4AA]" />
+                  </div>
+                )}
+              </motion.div>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+        </div>
+
+        {/* Input area */}
+        <div className="mt-3">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSendMessage();
+            }}
+            className="flex gap-3"
+          >
+            <Input
+              ref={inputRef}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder="Type your answer..."
+              disabled={isStreaming || completionStatus === "wrap_up"}
+              className="flex-1 border-gray-700 bg-[#1A2942] text-base text-white placeholder:text-gray-500 focus:border-[#00D4AA] focus:ring-[#00D4AA]"
             />
-          ))}
+            <Button
+              type="submit"
+              disabled={!inputValue.trim() || isStreaming || completionStatus === "wrap_up"}
+              className="bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0] disabled:opacity-50"
+            >
+              {isStreaming ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </form>
+
+          {/* Skip link */}
+          <div className="mt-2 text-center">
+            <button
+              onClick={handleSkip}
+              className="text-xs text-gray-500 transition-colors hover:text-gray-400"
+            >
+              Skip for now
+            </button>
+          </div>
         </div>
       </div>
-
-      {/* Section title */}
-      <motion.div
-        key={currentSection.section}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-6 text-center"
-      >
-        <h2 className="text-xl font-semibold text-white">{currentSection.title}</h2>
-        <p className="mt-1 text-sm text-gray-400">{currentSection.subtitle}</p>
-      </motion.div>
-
-      {/* Question */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentQuestion.key}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.2 }}
-          className="rounded-xl border border-gray-800 bg-[#111827] p-6"
-        >
-          <h3 className="mb-6 text-lg font-medium text-white">
-            {currentQuestion.text}
-          </h3>
-
-          {currentQuestion.options && currentQuestion.options.length > 0 ? (
-            <div className="space-y-3">
-              {currentQuestion.options.map((option) => {
-                const isSelected = sectionResponses[currentQuestion.key] === option.value;
-                return (
-                  <motion.button
-                    key={option.value}
-                    onClick={() => handleSelectOption(currentQuestion.key, option.value)}
-                    className={`w-full rounded-lg border px-5 py-4 text-left transition-all ${
-                      isSelected
-                        ? "border-[#00D4AA] bg-[#00D4AA]/10 shadow-[0_0_20px_rgba(0,212,170,0.15)]"
-                        : "border-gray-700 bg-[#1A2942]/30 hover:border-gray-600 hover:bg-[#1A2942]/50"
-                    }`}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        {option.emoji && (
-                          <span className="text-lg">{option.emoji}</span>
-                        )}
-                        <p className={`text-base font-medium ${isSelected ? "text-[#00D4AA]" : "text-gray-200"}`}>
-                          {option.label}
-                        </p>
-                      </div>
-                      {isSelected && (
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#00D4AA]"
-                        >
-                          <Check className="h-3.5 w-3.5 text-[#0A1628]" />
-                        </motion.div>
-                      )}
-                    </div>
-                  </motion.button>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <textarea
-                value={sectionResponses[currentQuestion.key] || ""}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setSectionResponses((prev) => ({ ...prev, [currentQuestion.key]: v }));
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleTextSubmit();
-                  }
-                }}
-                placeholder={currentQuestion.placeholder || "Type your answer..."}
-                rows={3}
-                className="w-full resize-none rounded-lg border border-gray-700 bg-[#1A2942]/30 p-4 text-gray-200 placeholder-gray-500 outline-none transition-colors focus:border-[#00D4AA] focus:ring-1 focus:ring-[#00D4AA]"
-              />
-              <div className="flex items-center justify-between">
-                {!currentQuestion.required && (
-                  <span className="text-xs text-gray-500">Optional</span>
-                )}
-                <Button
-                  onClick={handleTextSubmit}
-                  disabled={currentQuestion.required && !(sectionResponses[currentQuestion.key] || "").trim()}
-                  className="ml-auto bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0] btn-accent-glow disabled:opacity-50"
-                >
-                  Continue
-                  <ChevronRight className="ml-1 h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-        </motion.div>
-      </AnimatePresence>
-
-      {/* Navigation hint */}
-      <p className="mt-4 text-center text-xs text-gray-500">
-        {currentQuestion.options && currentQuestion.options.length > 0
-          ? "Select an option to continue"
-          : "Press Enter or click Continue"}
-      </p>
-    </div>
+    </>
   );
 }

@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Any, Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 # === Question/Section Schemas ===
@@ -217,3 +217,63 @@ class OnboardingResponseRecord(BaseModel):
     section: int
     question_order: int
     created_at: datetime
+
+
+# === Conversational Onboarding Schemas ===
+
+class OnboardingChatRequest(BaseModel):
+    messages: list[dict]  # [{"role": "user"|"assistant", "content": "..."}]
+
+
+class OnboardingChatCompleteRequest(BaseModel):
+    messages: list[dict]
+
+
+VALID_EXPERIENCE_LEVELS = {"none", "beginner", "intermediate", "advanced"}
+VALID_PRIMARY_GOALS = {"learn_basics", "start_investing", "grow_wealth", "retirement", "specific_goal"}
+VALID_RISK_TOLERANCES = {"conservative", "moderate", "aggressive"}
+VALID_INTERESTS = {"stocks", "etfs", "bonds", "crypto", "real_estate", "retirement"}
+VALID_LEARNING_PREFERENCES = {"read", "watch", "do", "discuss"}
+
+
+class ExtractedProfile(BaseModel):
+    experience_level: str = "beginner"
+    primary_goal: str = "learn_basics"
+    risk_tolerance: str = "moderate"
+    interests: list[str] = ["stocks", "etfs"]
+    learning_preference: str = "do"
+    additional_context: Optional[str] = None
+
+    @field_validator("experience_level")
+    @classmethod
+    def validate_experience_level(cls, v: str) -> str:
+        if v in VALID_EXPERIENCE_LEVELS:
+            return v
+        return "beginner"
+
+    @field_validator("primary_goal")
+    @classmethod
+    def validate_primary_goal(cls, v: str) -> str:
+        if v in VALID_PRIMARY_GOALS:
+            return v
+        return "learn_basics"
+
+    @field_validator("risk_tolerance")
+    @classmethod
+    def validate_risk_tolerance(cls, v: str) -> str:
+        if v in VALID_RISK_TOLERANCES:
+            return v
+        return "moderate"
+
+    @field_validator("interests")
+    @classmethod
+    def validate_interests(cls, v: list) -> list[str]:
+        valid = [i for i in v if i in VALID_INTERESTS]
+        return valid if valid else ["stocks", "etfs"]
+
+    @field_validator("learning_preference")
+    @classmethod
+    def validate_learning_preference(cls, v: str) -> str:
+        if v in VALID_LEARNING_PREFERENCES:
+            return v
+        return "do"

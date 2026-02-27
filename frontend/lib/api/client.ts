@@ -266,6 +266,51 @@ class ApiClient {
   }
 
   // ============================================
+  // Conversational Onboarding API
+  // ============================================
+
+  /**
+   * Send messages to the conversational onboarding chat endpoint.
+   * Returns a raw Response for SSE streaming (same pattern as sendChatMessage).
+   */
+  async sendOnboardingChat(
+    messages: { role: string; content: string }[]
+  ): Promise<Response> {
+    const response = await fetch(`${API_URL}/onboarding/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.accessToken}`,
+      },
+      body: JSON.stringify({ messages }),
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: response.statusText }));
+      throw new Error(error.detail || "Failed to send onboarding chat");
+    }
+
+    return response;
+  }
+
+  /**
+   * Complete onboarding by extracting profile from conversation transcript.
+   */
+  async completeOnboardingChat(
+    messages: { role: string; content: string }[]
+  ): Promise<{ ok: boolean; profile?: Record<string, unknown>; error?: string }> {
+    return this.post("/onboarding/chat/complete", { messages });
+  }
+
+  /**
+   * Skip onboarding entirely and create profile with defaults.
+   */
+  async skipOnboarding(): Promise<{ ok: boolean }> {
+    return this.post("/onboarding/skip");
+  }
+
+  // ============================================
   // Chat API
   // ============================================
 
