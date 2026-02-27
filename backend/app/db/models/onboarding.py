@@ -59,6 +59,12 @@ class UserProfile(Base):
     interests: Mapped[Optional[list]] = mapped_column(JSON)
     # ["stocks", "etfs", "bonds", "crypto", "real_estate", "retirement", "all"]
 
+    # === Conversation-Derived Fields ===
+    motivation: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    life_context: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    emotional_relationship: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    goals: Mapped[Optional[list]] = mapped_column(JSON, nullable=True)  # multi-select from taps
+
     # === Derived / Computed ===
     persona: Mapped[Optional[str]] = mapped_column(String(50))
     # AI-assigned: "cautious_beginner", "eager_learner", "goal_focused", etc.

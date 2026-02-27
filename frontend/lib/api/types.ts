@@ -55,6 +55,12 @@ export interface RawProfile {
   time_commitment: string | null;
   interests: string[] | null;
 
+  // Conversation-derived
+  motivation: string | null;
+  life_context: string | null;
+  emotional_relationship: string | null;
+  goals: string[] | null;
+
   // Status
   onboarding_completed: boolean;
   onboarding_completed_at: string | null;
@@ -72,6 +78,7 @@ export interface DerivedProfile {
   risk_summary: string | null;
   interests_summary: string | null;
   learning_summary: string | null;
+  about_you_summary: string | null;
 }
 
 // Combined profile response

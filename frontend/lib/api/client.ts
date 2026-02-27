@@ -47,6 +47,10 @@ class ApiClient {
     if (typeof window !== "undefined") {
       this.accessToken = localStorage.getItem("access_token");
       this.refreshToken = localStorage.getItem("refresh_token");
+      // Sync cookie for middleware auth checks
+      if (this.accessToken) {
+        document.cookie = `access_token=${this.accessToken}; path=/; max-age=900; SameSite=Lax`;
+      }
     }
   }
 
@@ -59,6 +63,7 @@ class ApiClient {
     if (typeof window !== "undefined") {
       localStorage.setItem("access_token", access);
       localStorage.setItem("refresh_token", refresh);
+      document.cookie = `access_token=${access}; path=/; max-age=900; SameSite=Lax`;
     }
   }
 
@@ -71,6 +76,7 @@ class ApiClient {
     if (typeof window !== "undefined") {
       localStorage.removeItem("access_token");
       localStorage.removeItem("refresh_token");
+      document.cookie = "access_token=; path=/; max-age=0";
     }
   }
 
@@ -274,15 +280,21 @@ class ApiClient {
    * Returns a raw Response for SSE streaming (same pattern as sendChatMessage).
    */
   async sendOnboardingChat(
-    messages: { role: string; content: string }[]
+    messages: { role: string; content: string }[],
+    tapResponses?: Record<string, string | string[]>
   ): Promise<Response> {
+    const body: Record<string, unknown> = { messages };
+    if (tapResponses) {
+      body.tap_responses = tapResponses;
+    }
+
     const response = await fetch(`${API_URL}/onboarding/chat`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${this.accessToken}`,
       },
-      body: JSON.stringify({ messages }),
+      body: JSON.stringify(body),
       cache: "no-store",
     });
 
@@ -301,6 +313,19 @@ class ApiClient {
     messages: { role: string; content: string }[]
   ): Promise<{ ok: boolean; profile?: Record<string, unknown>; error?: string }> {
     return this.post("/onboarding/chat/complete", { messages });
+  }
+
+  /**
+   * Complete hybrid onboarding by merging tap responses with conversation data.
+   */
+  async completeOnboardingConversation(
+    tapResponses: Record<string, string | string[]>,
+    messages: { role: string; content: string }[]
+  ): Promise<{ ok: boolean; profile?: Record<string, unknown>; error?: string }> {
+    return this.post("/onboarding/complete-conversation", {
+      tap_responses: tapResponses,
+      messages,
+    });
   }
 
   /**

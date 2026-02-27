@@ -12,6 +12,7 @@ import {
   BookOpen,
   TrendingUp,
   ChevronRight,
+  Heart,
 } from "lucide-react";
 
 import { api } from "@/lib/api/client";
@@ -26,6 +27,8 @@ const INTEREST_LABELS: Record<string, string> = {
   crypto: "Cryptocurrency",
   real_estate: "Real Estate",
   retirement: "Retirement Planning",
+  options: "Options Trading",
+  not_sure: "Not Sure Yet",
   all: "All Topics",
 };
 
@@ -202,6 +205,29 @@ export default function ProfilePage() {
                   )}
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* About You (from conversation) */}
+      {(raw.motivation || raw.life_context || raw.emotional_relationship) && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.12 }}
+        >
+          <Card className="border-gray-800 bg-[#111827] p-6">
+            <CardHeader className="p-0 pb-4">
+              <CardTitle className="flex items-center gap-2 text-white">
+                <Heart className="h-5 w-5 text-[#00D4AA]" />
+                About You
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 p-0">
+              {derived.about_you_summary && (
+                <p className="text-gray-300">{derived.about_you_summary}</p>
+              )}
             </CardContent>
           </Card>
         </motion.div>

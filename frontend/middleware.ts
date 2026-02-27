@@ -4,17 +4,30 @@ import type { NextRequest } from "next/server";
 /**
  * Middleware for route protection.
  *
- * Note: This is a basic client-side token check.
- * The actual auth validation happens in the dashboard layout
- * which verifies the token with the API.
+ * Single source of truth for auth redirects.
+ * Reads access_token from cookies (server-side compatible).
  */
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const token = request.cookies.get("access_token")?.value;
 
-  // We can't check localStorage from middleware, so we rely on client-side auth
-  // The dashboard layout handles the actual redirect if not authenticated
-  // The landing page (/) handles its own auth check and redirects authenticated users to /dashboard
+  // Root route: smart redirect
+  if (pathname === "/") {
+    const dest = token ? "/dashboard" : "/login";
+    return NextResponse.redirect(new URL(dest, request.url));
+  }
+
+  // Auth pages: redirect to dashboard if already logged in
+  const isAuthPage = pathname === "/login" || pathname === "/register";
+  if (isAuthPage && token) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  // Protected routes: redirect to login if not authenticated
+  if (!isAuthPage && !token) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
 
   return NextResponse.next();
 }

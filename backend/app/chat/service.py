@@ -202,6 +202,15 @@ class ChatService:
         elif interests:
             match_section += "\nTOPIC MATCH:\nNo direct match to the student's stated interests for this question. Respond neutrally without forcing a connection to their interests."
 
+        # Deeper context from onboarding conversation
+        conversation_context = ""
+        if user_profile.motivation:
+            conversation_context += f"- Why they started: {_sanitize_text(user_profile.motivation)}\n"
+        if user_profile.life_context:
+            conversation_context += f"- Life context: {_sanitize_text(user_profile.life_context)}\n"
+        if user_profile.emotional_relationship:
+            conversation_context += f"- Relationship with money: {_sanitize_text(user_profile.emotional_relationship)}\n"
+
         system_prompt = f"""You are the LCS Engine AI tutor — a warm, knowledgeable financial literacy guide.
 
 YOUR STUDENT:
@@ -213,7 +222,7 @@ YOUR STUDENT:
 - Preferred learning style: {learning_pref}
 - Time horizon: {time_horizon_display}
 - Interests: {interests_display}
-
+{conversation_context}
 COMMUNICATION STYLE:
 {tone}
 

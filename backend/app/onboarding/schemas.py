@@ -109,6 +109,12 @@ class UserProfileResponse(BaseModel):
     time_commitment: Optional[str] = None
     interests: Optional[list[str]] = None
 
+    # Conversation-derived
+    motivation: Optional[str] = None
+    life_context: Optional[str] = None
+    emotional_relationship: Optional[str] = None
+    goals: Optional[list[str]] = None
+
     # Computed
     persona: Optional[str] = None
     persona_description: Optional[str] = None
@@ -129,6 +135,8 @@ class UpdateProfileRequest(BaseModel):
     learning_preference: Optional[str] = None
     time_commitment: Optional[str] = None
     interests: Optional[list[str]] = None
+    motivation: Optional[str] = None
+    goals: Optional[list[str]] = None
 
 
 class RawProfileResponse(BaseModel):
@@ -163,6 +171,12 @@ class RawProfileResponse(BaseModel):
     time_commitment: Optional[str] = None
     interests: Optional[list[str]] = None
 
+    # Conversation-derived
+    motivation: Optional[str] = None
+    life_context: Optional[str] = None
+    emotional_relationship: Optional[str] = None
+    goals: Optional[list[str]] = None
+
     # Status
     onboarding_completed: bool = False
     onboarding_completed_at: Optional[datetime] = None
@@ -180,6 +194,7 @@ class DerivedProfileResponse(BaseModel):
     risk_summary: Optional[str] = None
     interests_summary: Optional[str] = None
     learning_summary: Optional[str] = None
+    about_you_summary: Optional[str] = None
 
 
 class FullProfileResponse(BaseModel):
@@ -223,17 +238,24 @@ class OnboardingResponseRecord(BaseModel):
 
 class OnboardingChatRequest(BaseModel):
     messages: list[dict]  # [{"role": "user"|"assistant", "content": "..."}]
+    tap_responses: Optional[dict] = None
 
 
 class OnboardingChatCompleteRequest(BaseModel):
     messages: list[dict]
 
 
+class OnboardingConversationCompleteRequest(BaseModel):
+    tap_responses: dict
+    messages: list[dict]
+
+
 VALID_EXPERIENCE_LEVELS = {"none", "beginner", "intermediate", "advanced"}
-VALID_PRIMARY_GOALS = {"learn_basics", "start_investing", "grow_wealth", "retirement", "specific_goal"}
+VALID_PRIMARY_GOALS = {"learn_basics", "start_investing", "grow_wealth", "retirement", "specific_goal", "side_income", "support_family", "understand_news"}
 VALID_RISK_TOLERANCES = {"conservative", "moderate", "aggressive"}
-VALID_INTERESTS = {"stocks", "etfs", "bonds", "crypto", "real_estate", "retirement"}
+VALID_INTERESTS = {"stocks", "etfs", "bonds", "crypto", "real_estate", "retirement", "options", "not_sure"}
 VALID_LEARNING_PREFERENCES = {"read", "watch", "do", "discuss"}
+VALID_LEARNING_STYLES = {"detailed", "concise", "examples", "actionable", "deep_dive"}
 
 
 class ExtractedProfile(BaseModel):
@@ -242,6 +264,10 @@ class ExtractedProfile(BaseModel):
     risk_tolerance: str = "moderate"
     interests: list[str] = ["stocks", "etfs"]
     learning_preference: str = "do"
+    goals: list[str] = ["learn_basics"]
+    motivation: Optional[str] = None
+    life_context: Optional[str] = None
+    emotional_relationship: Optional[str] = None
     additional_context: Optional[str] = None
 
     @field_validator("experience_level")
@@ -277,3 +303,9 @@ class ExtractedProfile(BaseModel):
         if v in VALID_LEARNING_PREFERENCES:
             return v
         return "do"
+
+    @field_validator("goals")
+    @classmethod
+    def validate_goals(cls, v: list) -> list[str]:
+        valid = [g for g in v if g in VALID_PRIMARY_GOALS]
+        return valid if valid else ["learn_basics"]

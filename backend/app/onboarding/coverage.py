@@ -3,38 +3,32 @@ Coverage state machine for conversational onboarding.
 
 Tracks which topics have been covered in the conversation using
 keyword/regex heuristics on user messages.
+
+With the hybrid tap+chat flow, the tap screens cover experience, goals,
+risk, interests, and learning_style. The chat phase explores deeper:
+motivation, life_context, and emotional_relationship.
 """
 
 import re
 
-REQUIRED_TOPICS = ["experience", "goals", "risk", "interests", "learning_style"]
+REQUIRED_TOPICS = ["motivation", "life_context", "emotional_relationship"]
 
 # Keyword patterns per topic (matched against user messages, case-insensitive)
 TOPIC_KEYWORDS: dict[str, list[str]] = {
-    "experience": [
-        "invest", "stock", "trade", "beginner", "never", "started",
-        "years", "portfolio", "etf", "crypto", "401k", "brokerage",
-        "new to", "first time", "no experience", "some experience",
+    "motivation": [
+        "why", "reason", "motivated", "inspired", "because", "decided",
+        "sparked", "moment", "started thinking", "got interested",
+        "made me want", "prompted", "pushed me", "finally",
     ],
-    "goals": [
-        "goal", "want to", "hope to", "retire", "save", "grow",
-        "wealth", "learn", "financial", "freedom", "income",
-        "planning", "future", "long term", "short term",
+    "life_context": [
+        "family", "kids", "children", "debt", "job", "income", "student",
+        "career", "mortgage", "rent", "salary", "wife", "husband", "partner",
+        "work", "busy", "time", "schedule", "retire", "promotion",
     ],
-    "risk": [
-        "risk", "lose", "drop", "conservative", "aggressive",
-        "comfortable", "nervous", "volatile", "safe", "scared",
-        "worry", "crash", "decline", "stomach",
-    ],
-    "interests": [
-        "interest", "stocks", "etf", "bond", "crypto", "real estate",
-        "retirement", "curious about", "want to learn about",
-        "fascinated", "drawn to", "index fund",
-    ],
-    "learning_style": [
-        "learn", "read", "watch", "video", "hands-on", "practice",
-        "discuss", "explain", "examples", "do", "tutorial",
-        "article", "course", "prefer",
+    "emotional_relationship": [
+        "feel", "afraid", "scared", "excited", "anxious", "confident",
+        "nervous", "overwhelmed", "comfortable", "worry", "stress", "hope",
+        "frustrated", "confused", "uncertain", "optimistic", "cautious",
     ],
 }
 
@@ -70,18 +64,32 @@ def compute_coverage(messages: list[dict]) -> dict[str, bool]:
     }
 
 
-def get_completion_status(coverage: dict[str, bool], turn_count: int) -> str:
+def get_completion_status(coverage: dict[str, bool], turn_count: int, messages: list[dict] | None = None) -> str:
     """
     Determine whether the conversation should continue or wrap up.
 
     Args:
         coverage: Dict from compute_coverage()
         turn_count: Number of user messages so far
+        messages: Optional full message list for disengagement detection
 
     Returns:
-        "wrap_up" if all 5 topics covered OR turn_count >= 6, else "continue"
+        "wrap_up" if all 3 topics covered OR turn_count >= 5 OR disengaged, else "continue"
     """
     all_covered = all(coverage.get(topic, False) for topic in REQUIRED_TOPICS)
-    if all_covered or turn_count >= 6:
+    if all_covered or turn_count >= 5:
         return "wrap_up"
+
+    # Detect disengagement: 2+ consecutive short user responses (<10 words)
+    if messages and turn_count >= 2:
+        user_messages = [
+            msg.get("content", "")
+            for msg in messages
+            if msg.get("role") == "user"
+        ]
+        if len(user_messages) >= 2:
+            last_two = user_messages[-2:]
+            if all(len(m.split()) < 10 for m in last_two):
+                return "wrap_up"
+
     return "continue"

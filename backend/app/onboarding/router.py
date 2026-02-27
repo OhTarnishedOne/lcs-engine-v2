@@ -9,6 +9,7 @@ Endpoints for the onboarding flow:
 - Get profile
 - Get personalized welcome
 - Conversational AI onboarding (chat, complete, skip)
+- Hybrid tap+chat (complete-conversation)
 """
 
 import json
@@ -41,6 +42,7 @@ from .schemas import (
     WelcomeResponse,
     OnboardingChatRequest,
     OnboardingChatCompleteRequest,
+    OnboardingConversationCompleteRequest,
     ExtractedProfile,
 )
 from .coverage import compute_coverage, get_completion_status, REQUIRED_TOPICS
@@ -80,6 +82,10 @@ def _build_user_profile_response(profile) -> UserProfileResponse:
         learning_preference=profile.learning_preference,
         time_commitment=profile.time_commitment,
         interests=_coerce_to_list(profile.interests),
+        motivation=profile.motivation,
+        life_context=profile.life_context,
+        emotional_relationship=profile.emotional_relationship,
+        goals=_coerce_to_list(profile.goals),
         persona=profile.persona,
         persona_description=profile.persona_description,
         recommended_path=profile.recommended_path,
@@ -119,6 +125,10 @@ def _build_raw_profile_response(profile) -> RawProfileResponse:
         learning_preference=profile.learning_preference,
         time_commitment=profile.time_commitment,
         interests=_coerce_to_list(profile.interests),
+        motivation=profile.motivation,
+        life_context=profile.life_context,
+        emotional_relationship=profile.emotional_relationship,
+        goals=_coerce_to_list(profile.goals),
         onboarding_completed=profile.onboarding_completed,
         onboarding_completed_at=profile.onboarding_completed_at,
     )
@@ -313,6 +323,26 @@ def get_welcome(
 # Conversational AI Onboarding Endpoints
 # =============================================================
 
+def _format_tap_context(tap_responses: dict | None) -> dict:
+    """Format tap responses into display strings for the system prompt."""
+    if not tap_responses:
+        return {
+            "experience": "not provided",
+            "goals": "not provided",
+            "risk": "not provided",
+            "interests": "not provided",
+            "learning_style": "not provided",
+        }
+
+    return {
+        "experience": tap_responses.get("experience_level", "not provided"),
+        "goals": ", ".join(tap_responses["goals"]) if isinstance(tap_responses.get("goals"), list) else tap_responses.get("goals", "not provided"),
+        "risk": tap_responses.get("risk_tolerance", "not provided"),
+        "interests": ", ".join(tap_responses["interests"]) if isinstance(tap_responses.get("interests"), list) else tap_responses.get("interests", "not provided"),
+        "learning_style": tap_responses.get("learning_style", "not provided"),
+    }
+
+
 @router.post("/chat")
 async def onboarding_chat(
     request: OnboardingChatRequest,
@@ -323,7 +353,7 @@ async def onboarding_chat(
     Conversational onboarding chat endpoint (streaming SSE).
 
     Send the full message history and receive a streamed AI response.
-    The AI tutor asks natural questions to learn about the user.
+    The AI tutor asks deeper questions informed by tap screen responses.
 
     Response format:
     ```
@@ -333,11 +363,12 @@ async def onboarding_chat(
     ```
     """
     messages = request.messages
+    tap_responses = request.tap_responses
 
     # Compute topic coverage from user messages
     coverage = compute_coverage(messages)
     turn_count = sum(1 for m in messages if m.get("role") == "user")
-    completion_status = get_completion_status(coverage, turn_count)
+    completion_status = get_completion_status(coverage, turn_count, messages)
 
     # Build dynamic system prompt
     covered = [t for t in REQUIRED_TOPICS if coverage.get(t, False)]
@@ -349,7 +380,15 @@ async def onboarding_chat(
         else COMPLETION_INSTRUCTION_CONTINUE
     )
 
+    # Format tap context for the system prompt
+    tap_context = _format_tap_context(tap_responses)
+
     system_prompt = ONBOARDING_CHAT_SYSTEM_PROMPT.format(
+        experience=tap_context["experience"],
+        goals=tap_context["goals"],
+        risk=tap_context["risk"],
+        interests=tap_context["interests"],
+        learning_style=tap_context["learning_style"],
         uncovered_topics=", ".join(uncovered) if uncovered else "none",
         covered_topics=", ".join(covered) if covered else "none",
         completion_instruction=completion_instruction,
@@ -392,9 +431,26 @@ async def onboarding_chat(
 # Map extraction values to UserProfile DB values
 EXPERIENCE_LEVEL_MAP = {
     "none": "never",
+    "a_little": "beginner",
+    "some": "intermediate",
+    "regular": "advanced",
+    # Also accept direct DB values
+    "never": "never",
     "beginner": "beginner",
     "intermediate": "intermediate",
     "advanced": "advanced",
+}
+
+LEARNING_STYLE_MAP = {
+    "detailed": "read",
+    "examples": "do",
+    "actionable": "watch",
+    "deep_dive": "discuss",
+    # Also accept direct DB values
+    "read": "read",
+    "watch": "watch",
+    "do": "do",
+    "discuss": "discuss",
 }
 
 RISK_TOLERANCE_MAP = {
@@ -413,6 +469,7 @@ async def onboarding_chat_complete(
 ):
     """
     Extract structured profile from onboarding conversation transcript.
+    (Legacy endpoint — kept for backward compatibility.)
 
     Calls Claude to extract profile data, validates it, creates UserProfile,
     and marks onboarding as complete.
@@ -464,6 +521,11 @@ async def onboarding_chat_complete(
         profile.has_investment_account = False
         profile.has_retirement_account = False
 
+        # Store conversation-derived fields
+        profile.motivation = extracted.motivation
+        profile.life_context = extracted.life_context
+        profile.emotional_relationship = extracted.emotional_relationship
+
         # Generate persona using existing service logic
         service = OnboardingService(db)
         persona, persona_desc = service._generate_persona(profile)
@@ -493,6 +555,127 @@ async def onboarding_chat_complete(
     except Exception as e:
         logger.error(f"Onboarding extraction failed: {type(e).__name__}: {e}")
         return {"ok": False, "error": "extraction_failed"}
+
+
+@router.post("/complete-conversation")
+async def complete_conversation(
+    request: OnboardingConversationCompleteRequest,
+    current_user: User = Depends(get_current_user),
+    ai_client: ResilientAIClient = Depends(get_ai_client),
+    db: Session = Depends(get_db),
+):
+    """
+    Complete the hybrid tap+chat onboarding.
+
+    Merges structured tap data with AI-extracted conversation data.
+    Tap data → experience_level, primary_goal, goals, risk_tolerance, interests, learning_preference
+    Extracted data → motivation, life_context, emotional_relationship
+    """
+    tap = request.tap_responses
+    messages = request.messages
+
+    try:
+        # Extract conversation-derived fields (if there are messages)
+        extracted_motivation = None
+        extracted_life_context = None
+        extracted_emotional_relationship = None
+
+        if messages and any(m.get("role") == "user" for m in messages):
+            try:
+                transcript_lines = []
+                for msg in messages:
+                    role = msg.get("role", "unknown")
+                    content = msg.get("content", "")
+                    transcript_lines.append(f"{role}: {content}")
+                transcript_text = "\n".join(transcript_lines)
+
+                extracted_data = await ai_client.chat_json(
+                    messages=[{"role": "user", "content": transcript_text}],
+                    system_prompt=ONBOARDING_EXTRACTION_PROMPT,
+                )
+
+                extracted_motivation = extracted_data.get("motivation")
+                extracted_life_context = extracted_data.get("life_context")
+                extracted_emotional_relationship = extracted_data.get("emotional_relationship")
+            except Exception as e:
+                logger.warning(f"Conversation extraction failed, using tap data only: {e}")
+
+        # Get or create UserProfile
+        profile = db.query(UserProfile).filter(
+            UserProfile.user_id == current_user.id
+        ).first()
+
+        if not profile:
+            profile = UserProfile(user_id=current_user.id)
+            db.add(profile)
+
+        # Map tap data to DB fields
+        experience_raw = tap.get("experience_level", "a_little")
+        profile.experience_level = EXPERIENCE_LEVEL_MAP.get(experience_raw, "beginner")
+
+        # Goals: first selected → primary_goal, all stored as goals JSON
+        tap_goals = tap.get("goals", ["learn_basics"])
+        if isinstance(tap_goals, list) and tap_goals:
+            profile.primary_goal = tap_goals[0]
+            profile.goals = tap_goals
+        else:
+            profile.primary_goal = "learn_basics"
+            profile.goals = ["learn_basics"]
+
+        profile.risk_tolerance = RISK_TOLERANCE_MAP.get(
+            tap.get("risk_tolerance", "moderate"), "moderate"
+        )
+
+        tap_interests = tap.get("interests", ["stocks", "etfs"])
+        profile.interests = tap_interests if isinstance(tap_interests, list) else ["stocks", "etfs"]
+
+        learning_style_raw = tap.get("learning_style", "examples")
+        profile.learning_preference = LEARNING_STYLE_MAP.get(learning_style_raw, "do")
+
+        # Set reasonable defaults for fields not in tap flow
+        profile.barriers = ["none"]
+        profile.biggest_barrier = None
+        profile.time_horizon = "3_to_5_years"
+        profile.monthly_investable = "not_sure"
+        profile.loss_reaction = "wait_and_see"
+        profile.current_situation = None
+        profile.time_commitment = "flexible"
+        profile.has_investment_account = False
+        profile.has_retirement_account = False
+
+        # Store conversation-derived fields
+        profile.motivation = extracted_motivation
+        profile.life_context = extracted_life_context
+        profile.emotional_relationship = extracted_emotional_relationship
+
+        # Generate persona
+        service = OnboardingService(db)
+        persona, persona_desc = service._generate_persona(profile)
+        profile.persona = persona
+        profile.persona_description = persona_desc
+
+        # Mark onboarding complete
+        profile.onboarding_completed = True
+        profile.onboarding_completed_at = datetime.now(UTC)
+
+        db.commit()
+        db.refresh(profile)
+
+        return {"ok": True, "profile": {
+            "experience_level": profile.experience_level,
+            "primary_goal": profile.primary_goal,
+            "risk_tolerance": profile.risk_tolerance,
+            "interests": profile.interests,
+            "learning_preference": profile.learning_preference,
+            "persona": profile.persona,
+            "motivation": profile.motivation,
+            "life_context": profile.life_context,
+            "emotional_relationship": profile.emotional_relationship,
+        }}
+
+    except Exception as e:
+        logger.error(f"Complete conversation failed: {type(e).__name__}: {e}")
+        return {"ok": False, "error": "completion_failed"}
 
 
 @router.post("/skip")
@@ -526,6 +709,7 @@ async def skip_onboarding(
     profile.time_commitment = "flexible"
     profile.has_investment_account = False
     profile.has_retirement_account = False
+    profile.goals = ["learn_basics"]
 
     # Generate persona
     service = OnboardingService(db)

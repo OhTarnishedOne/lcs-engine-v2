@@ -455,6 +455,16 @@ class OnboardingService:
             learning_summary += f", with {time_part} to dedicate"
         learning_summary += "."
 
+        # Generate about_you_summary from conversation-derived fields
+        about_you_parts = []
+        if profile.motivation:
+            about_you_parts.append(profile.motivation)
+        if profile.life_context:
+            about_you_parts.append(profile.life_context)
+        if profile.emotional_relationship:
+            about_you_parts.append(profile.emotional_relationship)
+        about_you_summary = " ".join(about_you_parts) if about_you_parts else None
+
         # Recompute persona (don't rely on stored value)
         persona, persona_desc = self._generate_persona(profile)
 
@@ -468,6 +478,7 @@ class OnboardingService:
             risk_summary=risk_summary,
             interests_summary=interests_summary,
             learning_summary=learning_summary,
+            about_you_summary=about_you_summary,
         )
 
     def get_personalized_welcome(self, user_id: str) -> WelcomeResponse:

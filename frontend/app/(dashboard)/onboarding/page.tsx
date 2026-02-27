@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { trackEvent } from "@/lib/analytics";
 import OnboardingFormFallback from "./form-fallback";
+import TapScreens from "./tap-screens";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -18,16 +19,18 @@ interface ChatMessage {
   isStreaming?: boolean;
 }
 
+type Phase = "tap" | "chat" | "extracting" | "fallback";
+
 export default function OnboardingPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
+  const [phase, setPhase] = useState<Phase>("tap");
+  const [tapResponses, setTapResponses] = useState<Record<string, string | string[]>>({});
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [completionStatus, setCompletionStatus] = useState<"continue" | "wrap_up" | null>(null);
-  const [showFallbackForm, setShowFallbackForm] = useState(false);
-  const [isExtracting, setIsExtracting] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -51,7 +54,7 @@ export default function OnboardingPage() {
   useEffect(() => {
     if (!onboardingTrackedRef.current) {
       onboardingTrackedRef.current = true;
-      trackEvent("onboarding_chat_started");
+      trackEvent("onboarding_started");
     }
   }, []);
 
@@ -60,7 +63,7 @@ export default function OnboardingPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // SSE stream consumer — reuses exact pattern from chat page
+  // SSE stream consumer
   const consumeStream = useCallback(async (response: Response): Promise<string | null> => {
     const reader = response.body?.getReader();
     if (!reader) return null;
@@ -125,26 +128,45 @@ export default function OnboardingPage() {
     return resultCompletionStatus;
   }, []);
 
-  // Send initial greeting on mount (empty messages = AI introduces itself)
+  // Handle tap screens completion
+  const handleTapComplete = (responses: Record<string, string | string[]>) => {
+    setTapResponses(responses);
+    trackEvent("onboarding_taps_completed");
+    setPhase("chat");
+  };
+
+  // Handle skip during taps
+  const handleTapSkip = async () => {
+    try {
+      await api.skipOnboarding();
+      trackEvent("onboarding_skipped", { phase: "tap" });
+      queryClient.invalidateQueries({ queryKey: ["onboarding-progress"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      router.replace("/dashboard");
+    } catch {
+      // Silently fail
+    }
+  };
+
+  // Send initial greeting when entering chat phase
   useEffect(() => {
-    if (initialGreetingSent.current || progressData?.is_complete) return;
+    if (phase !== "chat" || initialGreetingSent.current || progressData?.is_complete) return;
     initialGreetingSent.current = true;
 
     const sendGreeting = async () => {
       setIsStreaming(true);
       assistantContentRef.current = "";
 
-      // Add placeholder for assistant greeting
       setMessages([{ role: "assistant", content: "", isStreaming: true }]);
 
       try {
-        const response = await api.sendOnboardingChat([]);
+        const response = await api.sendOnboardingChat([], tapResponses);
         const status = await consumeStream(response);
         if (status) setCompletionStatus(status as "continue" | "wrap_up");
       } catch {
         setMessages([{
           role: "assistant",
-          content: "Hey there! I'm excited to help you get started with investing. Tell me a bit about yourself — have you done any investing before?",
+          content: "Great choices! Now I'd love to learn a bit more about you. What made you decide to start learning about investing?",
           isStreaming: false,
         }]);
       } finally {
@@ -154,11 +176,11 @@ export default function OnboardingPage() {
     };
 
     sendGreeting();
-  }, [progressData?.is_complete, consumeStream]);
+  }, [phase, progressData?.is_complete, consumeStream, tapResponses]);
 
   // Handle extraction after wrap_up
   const handleExtraction = useCallback(async (allMessages: ChatMessage[]) => {
-    setIsExtracting(true);
+    setPhase("extracting");
     trackEvent("onboarding_chat_extracting");
 
     try {
@@ -167,28 +189,25 @@ export default function OnboardingPage() {
         content: m.content,
       }));
 
-      const result = await api.completeOnboardingChat(transcript);
+      const result = await api.completeOnboardingConversation(tapResponses, transcript);
 
       if (result.ok) {
-        trackEvent("onboarding_completed", { method: "chat" });
+        trackEvent("onboarding_completed", { method: "hybrid" });
         queryClient.invalidateQueries({ queryKey: ["onboarding-progress"] });
         queryClient.invalidateQueries({ queryKey: ["profile"] });
         router.replace("/profile?welcome=true");
       } else {
-        // Extraction failed — offer form fallback
-        trackEvent("onboarding_chat_extraction_failed");
-        setShowFallbackForm(true);
+        trackEvent("onboarding_extraction_failed");
+        setPhase("fallback");
       }
     } catch {
-      setShowFallbackForm(true);
-    } finally {
-      setIsExtracting(false);
+      setPhase("fallback");
     }
-  }, [queryClient, router]);
+  }, [queryClient, router, tapResponses]);
 
   // Send user message
   const handleSendMessage = async () => {
-    if (!inputValue.trim() || isStreaming || isExtracting) return;
+    if (!inputValue.trim() || isStreaming) return;
 
     const userMessage = inputValue.trim();
     setInputValue("");
@@ -207,15 +226,13 @@ export default function OnboardingPage() {
         content: m.content,
       }));
 
-      const response = await api.sendOnboardingChat(apiMessages);
+      const response = await api.sendOnboardingChat(apiMessages, tapResponses);
       const status = await consumeStream(response);
 
       if (status) {
         setCompletionStatus(status as "continue" | "wrap_up");
 
-        // If wrap_up, trigger extraction after a brief pause
         if (status === "wrap_up") {
-          // Get final messages including the wrap-up response
           setTimeout(() => {
             setMessages((currentMessages) => {
               handleExtraction(currentMessages);
@@ -239,21 +256,36 @@ export default function OnboardingPage() {
     }
   };
 
-  // Handle skip
-  const handleSkip = async () => {
+  // Handle skip during chat
+  const handleChatSkip = async () => {
     try {
-      await api.skipOnboarding();
-      trackEvent("onboarding_skipped");
+      const transcript = messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+      await api.completeOnboardingConversation(tapResponses, transcript);
+      trackEvent("onboarding_skipped", { phase: "chat" });
       queryClient.invalidateQueries({ queryKey: ["onboarding-progress"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       router.replace("/dashboard");
     } catch {
-      // Silently fail — user can try again
+      // Fallback to basic skip
+      try {
+        await api.skipOnboarding();
+        router.replace("/dashboard");
+      } catch {
+        // Silently fail
+      }
     }
   };
 
-  // If extraction failed, show fallback form
-  if (showFallbackForm) {
+  // TAP PHASE
+  if (phase === "tap") {
+    return <TapScreens onComplete={handleTapComplete} onSkip={handleTapSkip} />;
+  }
+
+  // FALLBACK PHASE
+  if (phase === "fallback") {
     return (
       <div>
         <div className="mx-auto mb-4 max-w-2xl rounded-lg border border-yellow-600/30 bg-yellow-900/20 p-3 text-center text-sm text-yellow-300">
@@ -264,8 +296,8 @@ export default function OnboardingPage() {
     );
   }
 
-  // Extracting state
-  if (isExtracting) {
+  // EXTRACTING PHASE
+  if (phase === "extracting") {
     return (
       <div className="flex h-[calc(100vh-8rem)] items-center justify-center">
         <motion.div
@@ -281,6 +313,7 @@ export default function OnboardingPage() {
     );
   }
 
+  // CHAT PHASE
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: `
@@ -298,7 +331,7 @@ export default function OnboardingPage() {
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h1 className="text-lg font-semibold text-white">Getting to know you</h1>
+            <h1 className="text-lg font-semibold text-white">Let&apos;s go a bit deeper...</h1>
             <span
               className="inline-block h-2 w-2 rounded-full bg-[#00D4AA]"
               style={{ animation: "pulse-dot 2s ease-in-out infinite" }}
@@ -384,7 +417,7 @@ export default function OnboardingPage() {
           {/* Skip link */}
           <div className="mt-2 text-center">
             <button
-              onClick={handleSkip}
+              onClick={handleChatSkip}
               className="text-xs text-gray-500 transition-colors hover:text-gray-400"
             >
               Skip for now
