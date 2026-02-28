@@ -201,11 +201,30 @@ export default function AuthLayout({
             <AIChatPreview />
           </motion.div>
 
-          {/* Trust signals */}
+          {/* Social proof */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1 }}
+            className="mb-4 text-sm text-gray-400"
+          >
+            102+ Early Testers &middot; Paper trading only &mdash; no real money at risk
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.1 }}
+            className="mb-4 text-sm text-gray-400"
+          >
+            Built by a Columbia MBA. Backed by real market data.
+          </motion.div>
+
+          {/* Trust signals */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.2 }}
             className="flex items-center gap-1.5 text-xs text-gray-500"
           >
             <Lock className="h-3 w-3" />

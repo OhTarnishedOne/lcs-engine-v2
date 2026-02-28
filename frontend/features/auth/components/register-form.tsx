@@ -167,6 +167,9 @@ export function RegisterForm() {
             >
               {isLoading ? "Creating account..." : "Create A Free Account"}
             </Button>
+            <p className="mt-2 text-center text-sm text-gray-400">
+              Free. Takes 60 seconds.
+            </p>
             <p className="text-center text-sm text-gray-400">
               Already have an account?{" "}
               <Link
