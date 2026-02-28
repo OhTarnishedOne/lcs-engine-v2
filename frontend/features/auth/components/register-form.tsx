@@ -84,7 +84,7 @@ export function RegisterForm() {
           Create your account
         </CardTitle>
         <p className="text-base text-gray-400">
-          Enter your email and create a password to get started
+          Enter your email and create a password to get started for free
         </p>
       </CardHeader>
       <Form {...form}>
@@ -165,7 +165,7 @@ export function RegisterForm() {
               className="h-12 w-full text-base font-semibold bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0] hover:-translate-y-0.5 transition-all"
               disabled={isLoading}
             >
-              {isLoading ? "Creating account..." : "Create account"}
+              {isLoading ? "Creating account..." : "Create A Free Account"}
             </Button>
             <p className="text-center text-sm text-gray-400">
               Already have an account?{" "}

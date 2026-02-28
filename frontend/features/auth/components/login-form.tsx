@@ -139,7 +139,7 @@ export function LoginForm() {
                 href="/register"
                 className="font-medium text-[#00D4AA] hover:underline underline-offset-2"
               >
-                Sign up
+                Sign up for free
               </Link>
             </p>
 
