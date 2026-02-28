@@ -12,20 +12,17 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get("access_token")?.value;
 
-  // Root route: smart redirect
-  if (pathname === "/") {
-    const dest = token ? "/dashboard" : "/login";
-    return NextResponse.redirect(new URL(dest, request.url));
-  }
+  // Public routes: /, /login, /register — no auth required
+  const isPublicPage =
+    pathname === "/" || pathname === "/login" || pathname === "/register";
 
   // Auth pages: redirect to dashboard if already logged in
-  const isAuthPage = pathname === "/login" || pathname === "/register";
-  if (isAuthPage && token) {
+  if ((pathname === "/login" || pathname === "/register") && token) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   // Protected routes: redirect to login if not authenticated
-  if (!isAuthPage && !token) {
+  if (!isPublicPage && !token) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
