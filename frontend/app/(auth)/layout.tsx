@@ -208,7 +208,7 @@ export default function AuthLayout({
             transition={{ delay: 1 }}
             className="mb-4 text-sm text-gray-400"
           >
-            102+ Early Testers &middot; Paper trading only &mdash; no real money at risk
+            100+ Early Testers &middot; Paper trading only &mdash; no real money at risk
           </motion.div>
 
           <motion.div
