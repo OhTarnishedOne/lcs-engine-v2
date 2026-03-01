@@ -224,7 +224,7 @@ export default function HomePage() {
                 </Button>
               </Link>
               <span className="text-sm text-gray-500">
-                Free. Takes 60 seconds.
+                Free. No credit card required.
               </span>
             </motion.div>
           </motion.div>
@@ -251,7 +251,7 @@ export default function HomePage() {
         >
           <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:justify-center sm:gap-8 sm:text-left">
             <span className="text-sm text-gray-400">
-              100+ Early Testers &middot; Paper trading only &mdash; no real
+              100+ Survey Respondents &middot; Paper trading only &mdash; no real
               money at risk
             </span>
             <span className="hidden h-4 w-px bg-gray-700 sm:block" />
