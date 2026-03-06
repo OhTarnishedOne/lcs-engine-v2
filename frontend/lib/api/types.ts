@@ -131,6 +131,7 @@ export interface OnboardingProgress {
   total_questions: number;
   percent_complete: number;
   is_complete: boolean;
+  tap_responses: Record<string, string | string[]> | null;
 }
 
 export interface PersonalizedTip {

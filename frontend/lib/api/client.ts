@@ -329,6 +329,16 @@ class ApiClient {
   }
 
   /**
+   * Save a single tap screen response for persistence across sessions.
+   */
+  async saveTapResponse(
+    key: string,
+    value: string | string[]
+  ): Promise<{ saved: boolean; completed_screens: number }> {
+    return this.post("/onboarding/save-tap-response", { key, value });
+  }
+
+  /**
    * Skip onboarding entirely and create profile with defaults.
    */
   async skipOnboarding(): Promise<{ ok: boolean }> {

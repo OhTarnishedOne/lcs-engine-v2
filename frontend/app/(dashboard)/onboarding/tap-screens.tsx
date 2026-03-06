@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Loader2, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ScreenOption {
@@ -102,13 +103,29 @@ const SCREENS: Screen[] = [
 interface TapScreensProps {
   onComplete: (responses: Record<string, string | string[]>) => void;
   onSkip: () => void;
+  initialResponses?: Record<string, string | string[]>;
+  onSaveScreen?: (key: string, value: string | string[]) => Promise<void>;
 }
 
-export default function TapScreens({ onComplete, onSkip }: TapScreensProps) {
+export default function TapScreens({ onComplete, onSkip, initialResponses, onSaveScreen }: TapScreensProps) {
   const [currentScreen, setCurrentScreen] = useState(0);
   const [responses, setResponses] = useState<Record<string, string | string[]>>({});
   const [selected, setSelected] = useState<string[]>([]);
   const [direction, setDirection] = useState(1); // 1 = forward, -1 = backward
+  const [isSaving, setIsSaving] = useState(false);
+
+  // On mount: resume from first incomplete screen if we have saved responses
+  useEffect(() => {
+    if (initialResponses && Object.keys(initialResponses).length > 0) {
+      setResponses(initialResponses);
+      const firstIncomplete = SCREENS.findIndex(
+        (s) => !(s.key in initialResponses)
+      );
+      if (firstIncomplete !== -1) {
+        setCurrentScreen(firstIncomplete);
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const screen = SCREENS[currentScreen];
 
@@ -128,19 +145,55 @@ export default function TapScreens({ onComplete, onSkip }: TapScreensProps) {
     }
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (selected.length === 0) return;
 
     const value = screen.multiSelect ? selected : selected[0];
     const newResponses = { ...responses, [screen.key]: value };
+
+    // Persist to backend before advancing
+    if (onSaveScreen) {
+      setIsSaving(true);
+      try {
+        await onSaveScreen(screen.key, value);
+      } catch {
+        // Save failed — don't advance
+        setIsSaving(false);
+        return;
+      }
+      setIsSaving(false);
+    }
+
     setResponses(newResponses);
 
     if (currentScreen < SCREENS.length - 1) {
       setDirection(1);
       setCurrentScreen((prev) => prev + 1);
-      setSelected([]);
+      // Pre-fill selected if navigating to a screen with existing data
+      const nextKey = SCREENS[currentScreen + 1].key;
+      const existing = newResponses[nextKey];
+      if (existing) {
+        setSelected(Array.isArray(existing) ? existing : [existing]);
+      } else {
+        setSelected([]);
+      }
     } else {
       onComplete(newResponses);
+    }
+  };
+
+  const handleBack = () => {
+    if (currentScreen <= 0) return;
+    setDirection(-1);
+    const prevIndex = currentScreen - 1;
+    setCurrentScreen(prevIndex);
+    // Pre-fill selected from saved responses
+    const prevKey = SCREENS[prevIndex].key;
+    const existing = responses[prevKey];
+    if (existing) {
+      setSelected(Array.isArray(existing) ? existing : [existing]);
+    } else {
+      setSelected([]);
     }
   };
 
@@ -251,13 +304,29 @@ export default function TapScreens({ onComplete, onSkip }: TapScreensProps) {
 
       {/* Bottom actions */}
       <div className="mt-4 space-y-2 pb-4">
-        <Button
-          onClick={handleContinue}
-          disabled={selected.length === 0}
-          className="w-full bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0] disabled:opacity-50 h-12 text-base"
-        >
-          {currentScreen === SCREENS.length - 1 ? "Continue" : "Continue"}
-        </Button>
+        <div className="flex gap-2">
+          {currentScreen > 0 && (
+            <Button
+              onClick={handleBack}
+              disabled={isSaving}
+              variant="outline"
+              className="h-12 border-gray-700 bg-transparent text-gray-300 hover:bg-gray-800"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+          )}
+          <Button
+            onClick={handleContinue}
+            disabled={selected.length === 0 || isSaving}
+            className="flex-1 bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0] disabled:opacity-50 h-12 text-base"
+          >
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              "Continue"
+            )}
+          </Button>
+        </div>
         <div className="text-center">
           <button
             onClick={onSkip}

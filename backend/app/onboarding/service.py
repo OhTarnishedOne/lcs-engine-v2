@@ -607,7 +607,8 @@ class OnboardingService:
                 questions_answered=get_total_questions(),
                 total_questions=get_total_questions(),
                 percent_complete=100,
-                is_complete=True
+                is_complete=True,
+                tap_responses=profile.tap_responses,
             )
 
         # Get all responses
@@ -655,5 +656,6 @@ class OnboardingService:
             questions_answered=questions_answered,
             total_questions=total_questions,
             percent_complete=min(percent_complete, 99),  # Cap at 99 until fully complete
-            is_complete=False
+            is_complete=False,
+            tap_responses=profile.tap_responses if profile else None,
         )

@@ -32,6 +32,7 @@ from .schemas import (
     SaveResponsesRequest,
     SaveResponsesResponse,
     SaveSingleResponseRequest,
+    SaveTapResponseRequest,
     SaveSectionPathRequest,
     CompleteOnboardingRequest,
     UpdateProfileRequest,
@@ -229,6 +230,30 @@ def save_single_response(
         "question_key": response.question_key,
         "saved": True
     }
+
+
+@router.post("/save-tap-response")
+def save_tap_response(
+    request: SaveTapResponseRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Save a single tap screen response to the user profile's tap_responses JSON."""
+    profile = db.query(UserProfile).filter(
+        UserProfile.user_id == current_user.id
+    ).first()
+
+    if not profile:
+        profile = UserProfile(user_id=current_user.id)
+        db.add(profile)
+
+    existing = profile.tap_responses or {}
+    existing[request.key] = request.value
+    profile.tap_responses = existing
+
+    db.commit()
+
+    return {"saved": True, "completed_screens": len(existing)}
 
 
 @router.post("/complete", response_model=UserProfileResponse)

@@ -13,6 +13,8 @@ import { trackEvent } from "@/lib/analytics";
 import OnboardingFormFallback from "./form-fallback";
 import TapScreens from "./tap-screens";
 
+const TAP_SCREEN_KEYS = ["experience_level", "goals", "risk_tolerance", "interests", "learning_style"];
+
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -46,10 +48,24 @@ export default function OnboardingPage() {
   });
 
   useEffect(() => {
-    if (progressData?.is_complete) {
+    if (!progressData) return;
+    if (progressData.is_complete) {
       router.replace("/dashboard");
+      return;
     }
-  }, [progressData?.is_complete, router]);
+
+    // Resume from saved tap responses
+    const saved = progressData.tap_responses;
+    if (saved && Object.keys(saved).length > 0) {
+      const allTapsDone = TAP_SCREEN_KEYS.every((k) => k in saved);
+      if (allTapsDone) {
+        // All tap screens done — skip to chat phase
+        setTapResponses(saved);
+        setPhase("chat");
+      }
+      // If partial, TapScreens will handle resuming via initialResponses prop
+    }
+  }, [progressData, router]);
 
   useEffect(() => {
     if (!onboardingTrackedRef.current) {
@@ -127,6 +143,11 @@ export default function OnboardingPage() {
 
     return resultCompletionStatus;
   }, []);
+
+  // Save a single tap screen response to the backend
+  const handleSaveTapScreen = async (key: string, value: string | string[]) => {
+    await api.saveTapResponse(key, value);
+  };
 
   // Handle tap screens completion
   const handleTapComplete = (responses: Record<string, string | string[]>) => {
@@ -281,7 +302,14 @@ export default function OnboardingPage() {
 
   // TAP PHASE
   if (phase === "tap") {
-    return <TapScreens onComplete={handleTapComplete} onSkip={handleTapSkip} />;
+    return (
+      <TapScreens
+        onComplete={handleTapComplete}
+        onSkip={handleTapSkip}
+        initialResponses={progressData?.tap_responses ?? undefined}
+        onSaveScreen={handleSaveTapScreen}
+      />
+    );
   }
 
   // FALLBACK PHASE

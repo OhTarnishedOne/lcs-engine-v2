@@ -72,6 +72,7 @@ class UserProfile(Base):
 
     # === Progress Tracking ===
     current_section: Mapped[int] = mapped_column(Integer, default=1)
+    tap_responses: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     recommended_path: Mapped[Optional[str]] = mapped_column(String(50))
 
     # === Status ===

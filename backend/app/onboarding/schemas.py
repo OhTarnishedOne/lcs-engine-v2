@@ -52,6 +52,11 @@ class SaveSingleResponseRequest(BaseModel):
     answer_value: Any
 
 
+class SaveTapResponseRequest(BaseModel):
+    key: str
+    value: Any  # str or list[str]
+
+
 class SaveSectionPathRequest(BaseModel):
     responses: dict[str, Any]  # {question_key: answer_value}
 
@@ -76,6 +81,7 @@ class OnboardingProgressResponse(BaseModel):
     total_questions: int
     percent_complete: int
     is_complete: bool
+    tap_responses: Optional[dict] = None
 
 
 class UserProfileResponse(BaseModel):
