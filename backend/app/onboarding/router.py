@@ -655,6 +655,8 @@ async def complete_conversation(
         profile.interests = tap_interests if isinstance(tap_interests, list) else ["stocks", "etfs"]
 
         learning_style_raw = tap.get("learning_style", "examples")
+        if isinstance(learning_style_raw, list):
+            learning_style_raw = learning_style_raw[0] if learning_style_raw else "examples"
         profile.learning_preference = LEARNING_STYLE_MAP.get(learning_style_raw, "do")
 
         # Set reasonable defaults for fields not in tap flow
