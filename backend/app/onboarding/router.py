@@ -247,7 +247,7 @@ def save_tap_response(
         profile = UserProfile(user_id=current_user.id)
         db.add(profile)
 
-    existing = profile.tap_responses or {}
+    existing = dict(profile.tap_responses or {})
     existing[request.key] = request.value
     profile.tap_responses = existing
 
