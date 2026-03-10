@@ -12,7 +12,7 @@ from typing import AsyncGenerator, Optional
 
 from sqlalchemy.orm import Session
 
-from ..db.models import User, UserProfile, Conversation, Message
+from ..db.models import User, UserProfile, Conversation, Message, UserPrediction, PredictionMarket, CalibrationScore
 from ..integrations import ResilientAIClient
 from ..settings import get_settings
 
@@ -117,6 +117,100 @@ class ChatService:
             "use_match_language": len(direct_matches) > 0,
         }
 
+    def _get_prediction_context(self, user_id: str) -> Optional[str]:
+        """
+        Build probability lab context for the system prompt.
+        Summarizes the user's prediction match tiers and calibration data.
+        """
+        predictions_with_markets = (
+            self.db.query(UserPrediction, PredictionMarket)
+            .join(PredictionMarket, UserPrediction.market_id == PredictionMarket.id)
+            .filter(UserPrediction.user_id == user_id)
+            .all()
+        )
+
+        if not predictions_with_markets:
+            return None
+
+        exact = 0
+        close = 0
+        off = 0
+
+        for pred, market in predictions_with_markets:
+            if market.market_probability is None:
+                continue
+            diff = abs(pred.predicted_probability - market.market_probability) * 100
+            if diff <= 1:
+                exact += 1
+            elif diff <= 10:
+                close += 1
+            else:
+                off += 1
+
+        total = exact + close + off
+        if total == 0:
+            return None
+
+        lines = [f"This student has made {total} probability predictions in the Probability Lab."]
+
+        if exact + close >= total * 0.6:
+            lines.append(
+                f"Their predictions generally align with market consensus "
+                f"({exact} exact matches, {close} close). They have decent probabilistic intuition."
+            )
+            lines.append(
+                "You can reference their calibration skill positively. "
+                "Challenge them with edge cases and conditional probabilities."
+            )
+        elif off >= total * 0.6:
+            lines.append(
+                f"Their predictions often diverge from market consensus "
+                f"({off} of {total} were 10+ points off). They're building their probabilistic thinking."
+            )
+            lines.append(
+                "When probability comes up, gently introduce base rates and the wisdom of crowds. "
+                "Frame divergence as a learning opportunity, not a mistake."
+            )
+        else:
+            lines.append(
+                f"Their predictions are mixed — some close to consensus, others divergent "
+                f"({exact} exact, {close} close, {off} off)."
+            )
+            lines.append(
+                "Help them reflect on what drives confidence in their predictions vs. when they're guessing."
+            )
+
+        # Include calibration data if available
+        calibration = self.db.query(CalibrationScore).filter(
+            CalibrationScore.user_id == user_id
+        ).first()
+
+        if calibration:
+            if calibration.detected_biases:
+                bias_labels = {
+                    "overconfidence": "Overconfidence",
+                    "underconfidence": "Underconfidence",
+                    "anchoring": "Anchoring",
+                    "extreme_aversion": "Extreme Aversion",
+                }
+                names = [bias_labels.get(b, b) for b in calibration.detected_biases]
+                if names:
+                    lines.append(
+                        f"Detected cognitive biases: {', '.join(names)}. "
+                        "Weave awareness of these into conversations naturally when relevant."
+                    )
+
+            if calibration.average_brier_score is not None:
+                brier = calibration.average_brier_score
+                if brier < 0.1:
+                    lines.append("Their Brier score is excellent — they're well-calibrated.")
+                elif brier < 0.25:
+                    lines.append("Their Brier score is decent — room to improve but showing good instincts.")
+                else:
+                    lines.append("Their Brier score suggests significant room for calibration improvement.")
+
+        return "\n".join(lines)
+
     def build_system_prompt(self, user_profile: Optional[UserProfile], user_message: str = "") -> str:
         """
         Build a dynamic system prompt using the user's onboarding data.
@@ -202,6 +296,12 @@ class ChatService:
         elif interests:
             match_section += "\nTOPIC MATCH:\nNo direct match to the student's stated interests for this question. Respond neutrally without forcing a connection to their interests."
 
+        # Build probability lab context
+        prediction_section = ""
+        prediction_context = self._get_prediction_context(user_profile.user_id)
+        if prediction_context:
+            prediction_section = f"\nPROBABILITY LAB:\n{prediction_context}\n"
+
         # Deeper context from onboarding conversation
         conversation_context = ""
         if user_profile.motivation:
@@ -242,7 +342,7 @@ RULES:
 10. You can use simple examples with made-up numbers. "Imagine you invest $100 in..."
 11. Frame concepts through the lens of their time horizon ({time_horizon_display}). Short-horizon learners need to understand liquidity and risk differently than long-horizon learners.
 {match_section}
-ABOUT LCS ENGINE:
+{prediction_section}ABOUT LCS ENGINE:
 LCS stands for Learn, Choose, Strategize. It's a platform that helps people learn about investing through personalized education, AI conversation, paper trading (simulated), and probability exercises. It is NOT a brokerage. It does NOT manage real money. It's a safe space to learn without risk.
 
 WHAT YOU CAN HELP WITH:
