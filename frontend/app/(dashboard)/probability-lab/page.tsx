@@ -438,11 +438,18 @@ export default function ProbabilityLabPage() {
 
                   <div className="mb-6 rounded-lg bg-[#1A2942]/50 p-4">
                     <p className="text-sm text-gray-300">
-                      {Math.abs(showResult.predicted - showResult.market) <= 10
-                        ? "Your prediction is close to the market consensus."
-                        : showResult.predicted > showResult.market
-                        ? "You're more confident than the market."
-                        : "You're less confident than the market."}
+                      {(() => {
+                        const diff = Math.abs(showResult.predicted - showResult.market);
+                        if (diff <= 1) {
+                          return "Exact match! Your prediction matched the market consensus.";
+                        } else if (diff <= 10) {
+                          return `Very close! Your prediction was within ${Math.round(diff)} points of the market consensus.`;
+                        } else {
+                          return showResult.predicted > showResult.market
+                            ? `You're ${Math.round(diff)} points more confident than the market. Watch how this one resolves — it's a good learning opportunity.`
+                            : `You're ${Math.round(diff)} points less confident than the market. Watch how this one resolves — it's a good learning opportunity.`;
+                        }
+                      })()}
                     </p>
                   </div>
 
