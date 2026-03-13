@@ -12,9 +12,13 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get("access_token")?.value;
 
-  // Public routes: /, /login, /register — no auth required
+  // Public routes: /, /login, /register, /forgot-password, /reset-password — no auth required
   const isPublicPage =
-    pathname === "/" || pathname === "/login" || pathname === "/register";
+    pathname === "/" ||
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/forgot-password" ||
+    pathname === "/reset-password";
 
   // Auth pages: redirect to dashboard if already logged in
   if ((pathname === "/login" || pathname === "/register") && token) {

@@ -220,6 +220,18 @@ class ApiClient {
   }
 
   // ============================================
+  // Password Reset API (no auth required)
+  // ============================================
+
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    return this.post("/auth/forgot-password", { email });
+  }
+
+  async resetPassword(token: string, password: string): Promise<{ message: string }> {
+    return this.post("/auth/reset-password", { token, password });
+  }
+
+  // ============================================
   // Onboarding API
   // ============================================
 

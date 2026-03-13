@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Eye, EyeOff, Lock } from "lucide-react";
+import { CheckCircle, Eye, EyeOff, Lock } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,12 +25,10 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { useAuthStore } from "@/stores/auth-store";
-import { trackEvent } from "@/lib/analytics";
+import { api } from "@/lib/api/client";
 
-const registerSchema = z
+const resetSchema = z
   .object({
-    email: z.string().email("Please enter a valid email"),
     password: z
       .string()
       .min(8, "Password must be at least 8 characters")
@@ -45,48 +43,109 @@ const registerSchema = z
     path: ["confirmPassword"],
   });
 
-type RegisterFormValues = z.infer<typeof registerSchema>;
+type ResetFormValues = z.infer<typeof resetSchema>;
 
-export function RegisterForm() {
-  const router = useRouter();
-  const register = useAuthStore((state) => state.register);
-  const [error, setError] = useState<string | null>(null);
+export default function ResetPasswordPage() {
+  return (
+    <Suspense>
+      <ResetPasswordContent />
+    </Suspense>
+  );
+}
+
+function ResetPasswordContent() {
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token");
+
   const [isLoading, setIsLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const form = useForm<RegisterFormValues>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-      confirmPassword: "",
-    },
+  const form = useForm<ResetFormValues>({
+    resolver: zodResolver(resetSchema),
+    defaultValues: { password: "", confirmPassword: "" },
   });
 
-  async function onSubmit(data: RegisterFormValues) {
+  async function onSubmit(data: ResetFormValues) {
+    if (!token) return;
+
     setIsLoading(true);
     setError(null);
 
     try {
-      await register({ email: data.email, password: data.password });
-      trackEvent("signup_completed");
-      router.push("/onboarding");
+      await api.resetPassword(token, data.password);
+      setSuccess(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed");
+      setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setIsLoading(false);
     }
+  }
+
+  // No token in URL
+  if (!token) {
+    return (
+      <Card className="w-full max-w-lg border-gray-700 bg-[#111827] text-white shadow-xl">
+        <CardHeader className="space-y-2 px-10 pt-10 pb-6">
+          <CardTitle className="text-2xl font-bold text-white">
+            Invalid reset link
+          </CardTitle>
+          <p className="text-base text-gray-400">
+            This password reset link is invalid or missing a token.
+          </p>
+        </CardHeader>
+        <CardFooter className="px-10 pb-10 pt-2">
+          <Link href="/forgot-password" className="w-full">
+            <Button className="h-12 w-full text-base font-semibold bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0]">
+              Request a new reset link
+            </Button>
+          </Link>
+        </CardFooter>
+      </Card>
+    );
+  }
+
+  // Success state
+  if (success) {
+    return (
+      <Card className="w-full max-w-lg border-gray-700 bg-[#111827] text-white shadow-xl">
+        <CardHeader className="space-y-2 px-10 pt-10 pb-6">
+          <CardTitle className="text-2xl font-bold text-white">
+            Password reset successfully
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-10">
+          <div className="rounded-lg bg-[#00D4AA]/10 border border-[#00D4AA]/20 p-4">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="mt-0.5 h-5 w-5 text-[#00D4AA] shrink-0" />
+              <p className="text-sm text-gray-300">
+                Your password has been updated. You can now sign in with your
+                new password.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter className="px-10 pb-10 pt-4">
+          <Link href="/login" className="w-full">
+            <Button className="h-12 w-full text-base font-semibold bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0] hover:-translate-y-0.5 transition-all">
+              Sign in
+            </Button>
+          </Link>
+        </CardFooter>
+      </Card>
+    );
   }
 
   return (
     <Card className="w-full max-w-lg border-gray-700 bg-[#111827] text-white shadow-xl">
       <CardHeader className="space-y-2 px-10 pt-10 pb-6">
         <CardTitle className="text-2xl font-bold text-white">
-          Create your account
+          Create new password
         </CardTitle>
         <p className="text-base text-gray-400">
-          Enter your email and create a password to get started for free
+          Enter your new password below
         </p>
       </CardHeader>
       <Form {...form}>
@@ -99,38 +158,17 @@ export function RegisterForm() {
             )}
             <FormField
               control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-base text-gray-300">
-                    Email
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      type="email"
-                      placeholder="you@example.com"
-                      autoComplete="email"
-                      className="h-12 text-base rounded-lg border-gray-700 bg-[#1A2942] text-white placeholder:text-gray-500 focus:border-[#00D4AA] focus:ring-[#00D4AA]"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
               name="password"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-base text-gray-300">
-                    Password
+                    New Password
                   </FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Input
                         type={showPassword ? "text" : "password"}
-                        placeholder="Create a password"
+                        placeholder="Create a new password"
                         autoComplete="new-password"
                         className="h-12 text-base rounded-lg border-gray-700 bg-[#1A2942] text-white placeholder:text-gray-500 focus:border-[#00D4AA] focus:ring-[#00D4AA] pr-11"
                         {...field}
@@ -165,14 +203,16 @@ export function RegisterForm() {
                     <div className="relative">
                       <Input
                         type={showConfirmPassword ? "text" : "password"}
-                        placeholder="Confirm your password"
+                        placeholder="Confirm your new password"
                         autoComplete="new-password"
                         className="h-12 text-base rounded-lg border-gray-700 bg-[#1A2942] text-white placeholder:text-gray-500 focus:border-[#00D4AA] focus:ring-[#00D4AA] pr-11"
                         {...field}
                       />
                       <button
                         type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors"
                         tabIndex={-1}
                       >
@@ -195,31 +235,25 @@ export function RegisterForm() {
               className="h-12 w-full text-base font-semibold bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0] hover:-translate-y-0.5 transition-all"
               disabled={isLoading}
             >
-              {isLoading ? "Creating account..." : "Create A Free Account"}
+              {isLoading ? "Resetting..." : "Reset password"}
             </Button>
-            <p className="mt-2 text-center text-sm text-gray-400">
-              Free. No credit card required.
-            </p>
             <p className="text-center text-sm text-gray-400">
-              Already have an account?{" "}
               <Link
-                href="/login"
+                href="/forgot-password"
                 className="font-medium text-[#00D4AA] hover:underline underline-offset-2"
               >
-                Sign in
+                Request a new reset link
               </Link>
             </p>
-
-            {/* Divider */}
             <div className="flex w-full items-center gap-3 pt-2">
               <div className="h-px flex-1 bg-gray-700" />
               <div className="h-px flex-1 bg-gray-700" />
             </div>
-
-            {/* Trust signal */}
             <div className="flex items-center justify-center gap-1.5 text-xs text-gray-500">
               <Lock className="h-3 w-3" />
-              <span>Secure authentication &middot; Your data stays private</span>
+              <span>
+                Secure authentication &middot; Your data stays private
+              </span>
             </div>
           </CardFooter>
         </form>

@@ -1,4 +1,4 @@
-from .user import User
+from .user import User, PasswordResetToken
 from .profile import Profile
 from .onboarding import UserProfile, OnboardingResponse
 from .chat import Conversation, Message
@@ -21,4 +21,5 @@ __all__ = [
     "UserPrediction",
     "CalibrationScore",
     "AnalyticsEvent",
+    "PasswordResetToken",
 ]
