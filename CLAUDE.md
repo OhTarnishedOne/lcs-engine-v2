@@ -18,7 +18,7 @@ backend/
     settings.py           # Config via env vars
     deps.py               # FastAPI dependencies (get_db, get_current_user, get_ai_client)
     db/models/            # SQLAlchemy models
-    auth/                 # JWT auth (register, login, refresh)
+    auth/                 # JWT auth (register, login, refresh, forgot/reset password)
     onboarding/           # Tap screens + chat onboarding
     chat/                 # AI chat conversations
     strategies/           # AI-generated investment strategies
@@ -27,8 +27,9 @@ backend/
     admin/                # Stats endpoints (no auth)
     analytics/            # Event tracking
     config/               # Onboarding questions config
-  alembic/versions/       # Migrations (001-011, sequential IDs)
+  alembic/versions/       # Migrations (001-012, sequential IDs)
 frontend/
+  app/(auth)/             # Public auth pages (login, register, forgot-password, reset-password)
   app/(dashboard)/        # Authenticated pages (onboarding, chat, dashboard, etc.)
   lib/api/client.ts       # API client singleton with auto token refresh
   lib/api/types.ts        # Shared TypeScript interfaces
@@ -89,7 +90,7 @@ Two-phase: tap screens (5 quick questions) → AI chat conversation.
 - Mapping constants in router.py: `EXPERIENCE_LEVEL_MAP`, `LEARNING_STYLE_MAP`, `RISK_TOLERANCE_MAP`
 
 ## Migrations
-Sequential numbering: `001_initial_user_profile.py` through `011_add_tap_responses_column.py`. Use `down_revision` matching the previous number.
+Sequential numbering: `001_initial_user_profile.py` through `012_add_password_reset_tokens.py`. Use `down_revision` matching the previous number.
 
 ## Admin
 - `GET /api/admin/onboarding-stats` — no auth, aggregate onboarding analytics
