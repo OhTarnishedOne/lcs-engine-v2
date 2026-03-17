@@ -12,6 +12,7 @@ psycopg2-binary>=2.9.9
 # Auth
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
+resend>=2.0.0
 
 # Settings and validation
 pydantic>=2.6.0
