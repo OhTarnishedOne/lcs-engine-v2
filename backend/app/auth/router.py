@@ -1,6 +1,9 @@
 import logging
+import os
 import secrets
 from datetime import datetime, timedelta, UTC
+
+import resend
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -118,9 +121,20 @@ def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)) 
     db.add(reset_token)
     db.commit()
 
-    # TODO: Send email with reset link. For now, log it.
     reset_url = f"https://www.lcsengine.com/reset-password?token={token}"
-    logger.info(f"Password reset link for {user.email}: {reset_url}")
+
+    # Send reset email via Resend
+    resend.api_key = os.environ["RESEND_API_KEY"]
+    resend.Emails.send({
+        "from": "LCS Engine <noreply@lcsengine.com>",
+        "to": [user.email],
+        "subject": "Reset your LCS Engine password",
+        "html": (
+            "<p>Click the link below to reset your password:</p>"
+            f'<p><a href="{reset_url}">Reset Password</a></p>'
+            "<p>This link expires in 1 hour.</p>"
+        ),
+    })
 
     return {"message": RESET_SUCCESS_MSG}
 
