@@ -34,6 +34,14 @@ class ResilientAIClient:
         """Check if at least the primary client is configured."""
         return self.primary.is_configured()
 
+    @staticmethod
+    def _is_auth_error(error: Exception) -> bool:
+        """
+        Auth errors indicate a broken API key — we want these to surface
+        immediately instead of silently degrading to the fallback provider.
+        """
+        return type(error).__name__ == "AuthenticationError"
+
     async def chat_stream(
         self,
         messages: list[dict],
@@ -45,6 +53,10 @@ class ResilientAIClient:
             async for chunk in self.primary.chat_stream(messages, system_prompt, max_tokens):
                 yield chunk
         except Exception as primary_error:
+            if self._is_auth_error(primary_error):
+                logger.error(f"Primary (Claude) authentication failed — check ANTHROPIC_API_KEY: {primary_error}")
+                raise primary_error
+
             if self.fallback is None:
                 raise primary_error
 
@@ -68,6 +80,10 @@ class ResilientAIClient:
         try:
             return await self.primary.chat(messages, system_prompt, max_tokens)
         except Exception as primary_error:
+            if self._is_auth_error(primary_error):
+                logger.error(f"Primary (Claude) authentication failed — check ANTHROPIC_API_KEY: {primary_error}")
+                raise primary_error
+
             if self.fallback is None:
                 raise primary_error
 
@@ -84,6 +100,10 @@ class ResilientAIClient:
         try:
             return await self.primary.generate_title(first_message, first_response)
         except Exception as primary_error:
+            if self._is_auth_error(primary_error):
+                logger.error(f"Primary (Claude) authentication failed — check ANTHROPIC_API_KEY: {primary_error}")
+                raise primary_error
+
             if self.fallback is None:
                 return "New Conversation"
 
@@ -104,6 +124,10 @@ class ResilientAIClient:
         try:
             return await self.primary.chat_json(messages, system_prompt, max_tokens)
         except Exception as primary_error:
+            if self._is_auth_error(primary_error):
+                logger.error(f"Primary (Claude) authentication failed — check ANTHROPIC_API_KEY: {primary_error}")
+                raise primary_error
+
             if self.fallback is None:
                 raise primary_error
 
