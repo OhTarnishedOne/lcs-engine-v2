@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /chat/
+Disallow: /onboarding/
+Disallow: /paper-trade/
+Disallow: /probability-lab/
+Disallow: /profile/
+Disallow: /strategies/
+Disallow: /api/
+
+Sitemap: https://www.lcsengine.com/sitemap.xml
