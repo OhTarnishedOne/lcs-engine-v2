@@ -29,6 +29,8 @@ import { trackEvent } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SkeletonCard, RiskMeter, EmptyState } from "@/components/shared";
+import { UpgradeBanner } from "@/components/UpgradeBanner";
+import { useBillingStatus } from "@/hooks/useBillingStatus";
 import type { Strategy } from "@/lib/api/types";
 
 const STRATEGY_COLORS: Record<string, string> = {
@@ -51,6 +53,7 @@ const CHART_COLORS = [
 ];
 
 export default function StrategiesPage() {
+  const { isPro } = useBillingStatus();
   const queryClient = useQueryClient();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [compareMode, setCompareMode] = useState(false);
@@ -179,18 +182,28 @@ export default function StrategiesPage() {
               {compareMode ? "Cancel" : "Compare"}
             </Button>
           )}
-          <Button
-            onClick={() => generateMutation.mutate(undefined)}
-            disabled={generateMutation.isPending}
-            className="bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0]"
-          >
-            {generateMutation.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Plus className="mr-2 h-4 w-4" />
-            )}
-            Generate Strategy
-          </Button>
+          {isPro ? (
+            <Button
+              onClick={() => generateMutation.mutate(undefined)}
+              disabled={generateMutation.isPending}
+              className="bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0]"
+            >
+              {generateMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Plus className="mr-2 h-4 w-4" />
+              )}
+              Generate Strategy
+            </Button>
+          ) : (
+            <Button
+              onClick={() => window.location.href = "/pricing"}
+              className="bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0]"
+            >
+              <Sparkles className="mr-2 h-4 w-4" />
+              Upgrade to Generate
+            </Button>
+          )}
         </div>
       </motion.div>
 
@@ -253,15 +266,19 @@ export default function StrategiesPage() {
 
       {/* Strategies grid */}
       {strategies.length === 0 ? (
-        <EmptyState
-          icon={Sparkles}
-          title="No strategies yet"
-          description="Generate your first AI-powered investment strategy to get started."
-          action={{
-            label: "Generate Strategy",
-            onClick: () => generateMutation.mutate(undefined),
-          }}
-        />
+        isPro ? (
+          <EmptyState
+            icon={Sparkles}
+            title="No strategies yet"
+            description="Generate your first AI-powered investment strategy to get started."
+            action={{
+              label: "Generate Strategy",
+              onClick: () => generateMutation.mutate(undefined),
+            }}
+          />
+        ) : (
+          <UpgradeBanner feature="AI-generated investment strategies" />
+        )
       ) : (
         <div className="grid gap-6 md:grid-cols-2">
           {strategies.map((strategy, index) => (

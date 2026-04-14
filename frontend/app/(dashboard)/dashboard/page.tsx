@@ -17,6 +17,9 @@ import {
 import { api } from "@/lib/api/client";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
+import { UpgradeSuccessBanner } from "@/components/UpgradeSuccessBanner";
+import { useBillingStatus } from "@/hooks/useBillingStatus";
+import { useUpgrade } from "@/hooks/useUpgrade";
 
 const quickActions = [
   {
@@ -55,6 +58,8 @@ const quickActions = [
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
+  const { isPro } = useBillingStatus();
+  const { upgrade, isLoading: upgradeLoading } = useUpgrade();
   const [greeting] = useState(() => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
@@ -82,6 +87,8 @@ export default function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
+      <UpgradeSuccessBanner />
+
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
@@ -182,6 +189,30 @@ export default function DashboardPage() {
           ))}
         </div>
       </motion.div>
+
+      {/* Upgrade CTA for free users */}
+      {!isPro && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="mt-6 mb-8 rounded-xl border border-[#00D4AA]/20 bg-[#00D4AA]/5 p-6 flex items-center justify-between gap-4"
+        >
+          <div>
+            <p className="font-semibold text-white">Unlock the full platform</p>
+            <p className="text-sm text-gray-400 mt-0.5">
+              Probability Lab, paper trading, unlimited AI tutor, and AI strategies — all for $20/month.
+            </p>
+          </div>
+          <Button
+            onClick={upgrade}
+            disabled={upgradeLoading}
+            className="shrink-0 bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0]"
+          >
+            Upgrade to Pro
+          </Button>
+        </motion.div>
+      )}
 
       {/* Recent Activity & Tips */}
       <motion.div

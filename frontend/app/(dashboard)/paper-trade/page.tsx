@@ -19,6 +19,7 @@ import { trackEvent } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatCard, SkeletonCard, EmptyState } from "@/components/shared";
+import { ProGate } from "@/components/ProGate";
 
 
 export default function PaperTradePage() {
@@ -176,6 +177,7 @@ export default function PaperTradePage() {
   }
 
   return (
+    <ProGate feature="paper trading">
     <div className="mx-auto max-w-6xl">
       {/* Header */}
       <motion.div
@@ -573,5 +575,6 @@ export default function PaperTradePage() {
         )}
       </AnimatePresence>
     </div>
+    </ProGate>
   );
 }

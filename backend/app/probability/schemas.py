@@ -78,6 +78,13 @@ class CalibrationBucket(BaseModel):
     count: int
 
 
+class MacroStrategyRequest(BaseModel):
+    """Request for CPI → strategy loop."""
+    market_id: str
+    market_title: str        # e.g. "CPI YoY — March 2026"
+    user_prediction: float   # the probability the user submitted
+
+
 class CalibrationResponse(BaseModel):
     """User calibration and bias report."""
     total_predictions: int

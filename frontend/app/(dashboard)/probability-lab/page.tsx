@@ -26,6 +26,10 @@ import { api } from "@/lib/api/client";
 import { trackEvent } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import { SkeletonCard, EmptyState } from "@/components/shared";
+import { ProGate } from "@/components/ProGate";
+import { MacroStrategyCard } from "@/components/MacroStrategyCard";
+import { UpgradeBanner } from "@/components/UpgradeBanner";
+import { useBillingStatus } from "@/hooks/useBillingStatus";
 import type { PredictionMarket } from "@/lib/api/types";
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -37,6 +41,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export default function ProbabilityLabPage() {
+  const { isPro } = useBillingStatus();
   const queryClient = useQueryClient();
   const [selectedMarket, setSelectedMarket] = useState<PredictionMarket | null>(null);
   const [probability, setProbability] = useState(50);
@@ -154,6 +159,7 @@ export default function ProbabilityLabPage() {
   }
 
   return (
+    <ProGate feature="the Probability Lab">
     <div className="mx-auto max-w-6xl">
       {/* Header */}
       <motion.div
@@ -453,9 +459,22 @@ export default function ProbabilityLabPage() {
                     </p>
                   </div>
 
+                  {showResult && selectedMarket && isPro && (
+                    <MacroStrategyCard
+                      marketId={selectedMarket.id}
+                      marketTitle={selectedMarket.title}
+                      userPrediction={probability}
+                    />
+                  )}
+                  {showResult && selectedMarket && !isPro && (
+                    <div className="mt-4">
+                      <UpgradeBanner feature="macro-to-portfolio strategy insights" />
+                    </div>
+                  )}
+
                   <Button
                     onClick={closeModal}
-                    className="w-full bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0]"
+                    className="mt-4 w-full bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0]"
                   >
                     Done
                   </Button>
@@ -571,5 +590,6 @@ export default function ProbabilityLabPage() {
         )}
       </AnimatePresence>
     </div>
+    </ProGate>
   );
 }

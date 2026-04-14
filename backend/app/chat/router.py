@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from ..deps import get_db, get_current_user, get_ai_client
 from ..db.models import User
+from ..db.models.chat import Conversation
 from ..integrations import ResilientAIClient
 from ..common.errors import NotFoundError
 from .service import ChatService
@@ -29,6 +30,8 @@ from .schemas import (
 
 router = APIRouter(tags=["chat"])
 logger = logging.getLogger(__name__)
+
+FREE_CONVERSATION_LIMIT = 3
 
 
 def get_chat_service(
@@ -55,11 +58,37 @@ def _get_user_friendly_error(error: Exception) -> str:
         return "Something went wrong on my end. Please try sending your message again."
 
 
+@router.get("/session-status")
+def get_session_status(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """
+    Returns conversation count and whether the free limit is hit.
+    Used by the frontend to gate new conversations for Free users.
+    """
+    count = (
+        db.query(Conversation)
+        .filter(Conversation.user_id == current_user.id)
+        .count()
+    )
+    is_pro = current_user.tier == "pro"
+    limit_reached = not is_pro and count >= FREE_CONVERSATION_LIMIT
+
+    return {
+        "conversation_count": count,
+        "limit": FREE_CONVERSATION_LIMIT,
+        "limit_reached": limit_reached,
+        "is_pro": is_pro,
+    }
+
+
 @router.post("/messages")
 async def send_message(
     request: ChatMessageRequest,
     current_user: User = Depends(get_current_user),
     service: ChatService = Depends(get_chat_service),
+    db: Session = Depends(get_db),
 ):
     """
     Send a message and get a streamed AI response.
@@ -79,6 +108,19 @@ async def send_message(
     data: {"type": "error", "content": "Error message"}
     ```
     """
+    # Enforce free tier limit on new conversations only
+    if not request.conversation_id and current_user.tier != "pro":
+        count = (
+            db.query(Conversation)
+            .filter(Conversation.user_id == current_user.id)
+            .count()
+        )
+        if count >= FREE_CONVERSATION_LIMIT:
+            raise HTTPException(
+                status_code=402,
+                detail="Free plan limit reached. Upgrade to Pro for unlimited conversations."
+            )
+
     async def event_stream():
         try:
             async for event in service.send_message_stream(

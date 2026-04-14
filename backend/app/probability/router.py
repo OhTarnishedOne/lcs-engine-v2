@@ -7,9 +7,9 @@ API endpoints for prediction markets and calibration.
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from ..deps import get_db, get_current_user, get_kalshi_client
-from ..db.models import User
-from ..integrations import KalshiClient
+from ..deps import get_db, get_current_user, get_kalshi_client, get_ai_client
+from ..db.models import User, UserProfile
+from ..integrations import KalshiClient, ResilientAIClient
 from ..integrations.fred import FredClient
 from ..settings import get_settings
 from .service import ProbabilityService
@@ -23,6 +23,7 @@ from .schemas import (
     CalibrationResponse,
     CalibrationBucket,
     BiasInfo,
+    MacroStrategyRequest,
 )
 
 router = APIRouter(tags=["probability"])
@@ -170,6 +171,92 @@ async def get_calibration(
             BiasInfo(**b) for b in data["detected_biases"]
         ],
     )
+
+
+@router.post("/macro-strategy")
+async def get_macro_strategy(
+    request: MacroStrategyRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    ai_client: ResilientAIClient = Depends(get_ai_client),
+):
+    """
+    Given a user's macro prediction, generate a hypothetical
+    investment strategy based on that view + their archetype.
+    Pro only.
+    """
+    if current_user.tier != "pro":
+        raise HTTPException(status_code=402, detail="Pro required")
+
+    profile = db.query(UserProfile).filter(
+        UserProfile.user_id == current_user.id
+    ).first()
+
+    archetype = profile.persona if profile else "Balanced Builder"
+    risk = profile.risk_tolerance if profile else "moderate"
+
+    prompt = _build_macro_strategy_prompt(
+        market_title=request.market_title,
+        user_prediction=request.user_prediction,
+        archetype=archetype,
+        risk_tolerance=risk,
+    )
+
+    import json as _json
+
+    response = await ai_client.chat_json(
+        messages=[{"role": "user", "content": prompt}],
+        system_prompt="You are a financial educator. Respond with valid JSON only.",
+    )
+
+    # Frontend expects a JSON string to parse
+    return {"strategy": _json.dumps(response)}
+
+
+def _build_macro_strategy_prompt(
+    market_title: str,
+    user_prediction: float,
+    archetype: str,
+    risk_tolerance: str,
+) -> str:
+    if user_prediction >= 65:
+        direction = "likely to come in above expectations (inflationary)"
+        implication = "persistent inflation, Fed staying hawkish longer"
+    elif user_prediction <= 35:
+        direction = "likely to come in below expectations (disinflationary)"
+        implication = "cooling inflation, potential for Fed rate cuts"
+    else:
+        direction = "likely to come in roughly in line with expectations"
+        implication = "a soft landing scenario with moderate growth"
+
+    return f"""You are a financial educator helping a user understand how their
+macro prediction connects to portfolio strategy.
+
+The user predicted: {market_title}
+Their view: {direction} (probability: {user_prediction}%)
+Macro implication: {implication}
+
+The user's investor archetype: {archetype}
+Their risk tolerance: {risk_tolerance}
+
+Generate a SHORT hypothetical portfolio strategy (not financial advice) that
+reflects this macro view, adjusted for their archetype and risk tolerance.
+
+Format your response as JSON with this exact structure:
+{{
+  "thesis": "One sentence macro thesis based on their prediction",
+  "assets": [
+    {{"name": "Asset class or ETF example", "allocation": 30, "rationale": "Why this fits the thesis"}},
+    {{"name": "...", "allocation": 25, "rationale": "..."}},
+    {{"name": "...", "allocation": 25, "rationale": "..."}},
+    {{"name": "...", "allocation": 20, "rationale": "..."}}
+  ],
+  "risk_note": "One sentence on what could invalidate this thesis",
+  "learning_point": "One sentence connecting this to a core investing concept"
+}}
+
+Be educational, not prescriptive. This is a learning exercise, not a
+recommendation. Keep each rationale under 15 words."""
 
 
 @router.post("/resolve-check")

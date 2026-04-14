@@ -23,6 +23,12 @@ class User(Base):
     )
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), onupdate=utc_now)
 
+    # Billing
+    tier: Mapped[str] = mapped_column(String(20), nullable=False, default="free")
+    stripe_customer_id: Mapped[str | None] = mapped_column(
+        String(100), unique=True, nullable=True, index=True
+    )
+
     # Relationship to profile (basic profile from Phase 1)
     profile: Mapped["Profile"] = relationship(
         "Profile", back_populates="user", uselist=False, cascade="all, delete-orphan"

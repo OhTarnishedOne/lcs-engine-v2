@@ -21,7 +21,8 @@ export function middleware(request: NextRequest) {
     pathname === "/reset-password" ||
     pathname === "/organizations" ||
     pathname === "/privacy" ||
-    pathname === "/terms";
+    pathname === "/terms" ||
+    pathname === "/pricing";
 
   // Auth pages: redirect to dashboard if already logged in
   if ((pathname === "/login" || pathname === "/register") && token) {

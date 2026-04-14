@@ -28,6 +28,9 @@ alpaca-py>=0.21.0
 pytz>=2024.1
 python-dateutil>=2.9.0
 
+# Billing
+stripe>=7.0.0
+
 # Development
 httpx>=0.26.0
 pytest>=7.4.0

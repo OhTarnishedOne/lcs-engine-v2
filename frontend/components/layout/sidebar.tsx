@@ -12,6 +12,7 @@ import {
   X,
   BarChart3,
   UserCircle,
+  Lock,
 } from "lucide-react";
 
 import { useQuery } from "@tanstack/react-query";
@@ -21,6 +22,9 @@ import { api } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useUIStore } from "@/stores/ui-store";
+import { useBillingStatus } from "@/hooks/useBillingStatus";
+
+const PRO_ROUTES = new Set(["/probability-lab", "/paper-trade"]);
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -32,6 +36,7 @@ const navigation = [
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const { isPro } = useBillingStatus();
 
   const { data: progress } = useQuery({
     queryKey: ["onboarding-progress"],
@@ -63,6 +68,9 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
             >
               <item.icon className={cn("h-5 w-5", isActive && "text-[#00D4AA]")} />
               {item.name}
+              {PRO_ROUTES.has(item.href) && !isPro && (
+                <Lock className="ml-auto h-3 w-3 text-gray-600" />
+              )}
             </Link>
           );
         })}
@@ -112,7 +120,7 @@ export function Sidebar() {
 
         {/* Version */}
         <div className="border-t border-gray-800 p-4">
-          <p className="text-xs text-gray-600">v2.0 • Phase 6</p>
+          <p className="text-xs text-gray-600">v3.0</p>
         </div>
       </div>
     </aside>
@@ -154,7 +162,7 @@ export function MobileSidebar() {
 
           {/* Version */}
           <div className="border-t border-gray-800 p-4">
-            <p className="text-xs text-gray-600">v2.0 • Phase 6</p>
+            <p className="text-xs text-gray-600">v3.0</p>
           </div>
         </div>
       </SheetContent>

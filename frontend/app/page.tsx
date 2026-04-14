@@ -157,6 +157,22 @@ export default function HomePage() {
           <span className="text-xl font-bold text-white">LCS Engine</span>
         </div>
         <div className="flex items-center gap-3">
+          <a href="https://demo.lcsengine.com" target="_blank" rel="noopener noreferrer">
+            <Button
+              variant="ghost"
+              className="text-sm text-gray-300 hover:text-white hover:bg-white/5"
+            >
+              Try Demo
+            </Button>
+          </a>
+          <Link href="/pricing">
+            <Button
+              variant="ghost"
+              className="text-sm text-gray-300 hover:text-white hover:bg-white/5"
+            >
+              Pricing
+            </Button>
+          </Link>
           <Link href="/login">
             <Button
               variant="ghost"
@@ -226,6 +242,9 @@ export default function HomePage() {
               <span className="text-sm text-gray-500">
                 Free. No credit card required.
               </span>
+              <Link href="/pricing" className="text-sm text-gray-500 hover:text-gray-400 transition-colors">
+                See pricing →
+              </Link>
             </motion.div>
           </motion.div>
 
@@ -251,8 +270,7 @@ export default function HomePage() {
         >
           <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:justify-center sm:gap-8 sm:text-left">
             <span className="text-sm text-gray-400">
-              100+ Survey Respondents &middot; Paper trading only &mdash; no real
-              money at risk
+              6 active learners &middot; 83% onboarding completion &middot; Institutional pilots in progress
             </span>
             <span className="hidden h-4 w-px bg-gray-700 sm:block" />
             <span className="text-sm text-gray-400">

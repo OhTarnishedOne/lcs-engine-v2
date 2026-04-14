@@ -15,11 +15,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuthStore } from "@/stores/auth-store";
 import { useUIStore } from "@/stores/ui-store";
+import { useBillingStatus } from "@/hooks/useBillingStatus";
 
 export function Header() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
   const { toggleSidebar } = useUIStore();
+  const { isPro } = useBillingStatus();
 
   const initials = user?.email
     ? user.email.substring(0, 2).toUpperCase()
@@ -81,7 +83,14 @@ export function Header() {
                   <p className="text-sm font-medium text-gray-100 truncate max-w-[150px]">
                     {user?.email}
                   </p>
-                  <p className="text-xs text-gray-500">Free Plan</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-xs text-gray-500">{isPro ? "Pro" : "Free"} Plan</p>
+                    {isPro && (
+                      <span className="rounded-full bg-[#00D4AA]/20 px-1.5 py-0.5 text-[10px] font-semibold text-[#00D4AA]">
+                        PRO
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <DropdownMenuSeparator className="bg-gray-700" />

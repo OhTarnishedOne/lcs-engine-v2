@@ -503,6 +503,31 @@ class ApiClient {
   async getCalibration(): Promise<CalibrationResponse> {
     return this.get<CalibrationResponse>("/probability/calibration");
   }
+
+  // ============================================
+  // Billing API
+  // ============================================
+
+  async createCheckoutSession(): Promise<{ url: string }> {
+    return this.post<{ url: string }>("/billing/create-checkout-session");
+  }
+
+  async getBillingStatus(): Promise<{ tier: string; is_pro: boolean }> {
+    return this.get<{ tier: string; is_pro: boolean }>("/billing/status");
+  }
+
+  // ============================================
+  // Session Status API
+  // ============================================
+
+  async getSessionStatus(): Promise<{
+    conversation_count: number;
+    limit: number;
+    limit_reached: boolean;
+    is_pro: boolean;
+  }> {
+    return this.get("/chat/session-status");
+  }
 }
 
 // Singleton instance

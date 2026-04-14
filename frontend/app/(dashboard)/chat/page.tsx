@@ -19,6 +19,8 @@ import {
 import { api, API_URL } from "@/lib/api/client";
 import { trackEvent } from "@/lib/analytics";
 import type { Strategy } from "@/lib/api/types";
+import { useSessionStatus } from "@/hooks/useSessionStatus";
+import { UpgradeBanner } from "@/components/UpgradeBanner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -36,6 +38,7 @@ interface StreamingMessage {
 
 export default function ChatPage() {
   const queryClient = useQueryClient();
+  const { limitReached } = useSessionStatus();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<StreamingMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -172,6 +175,7 @@ export default function ChatPage() {
               newConversationId = data.conversation_id;
               if (!selectedConversationId) {
                 setSelectedConversationId(newConversationId);
+                queryClient.invalidateQueries({ queryKey: ["session-status"] });
               }
             } else if (data.type === "token") {
               assistantContentRef.current += data.content;
@@ -289,13 +293,19 @@ export default function ChatPage() {
             )}
 
             <div className="flex h-full flex-col p-4">
-              <Button
-                onClick={handleNewChat}
-                className="mb-4 w-full bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0]"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                New Chat
-              </Button>
+              {limitReached ? (
+                <div className="mb-4">
+                  <UpgradeBanner feature="unlimited AI tutor sessions" />
+                </div>
+              ) : (
+                <Button
+                  onClick={handleNewChat}
+                  className="mb-4 w-full bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0]"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Chat
+                </Button>
+              )}
 
               <div className="flex-1 overflow-y-auto">
                 {conversationsLoading ? (
@@ -446,35 +456,41 @@ export default function ChatPage() {
         </div>
 
         {/* Input */}
-        <div className="border-t border-gray-800 p-4">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSendMessage();
-            }}
-            className="flex gap-3"
-          >
-            <Input
-              ref={inputRef}
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Ask about investing, markets, strategies..."
-              disabled={isStreaming}
-              className="flex-1 border-gray-700 bg-[#1A2942] text-base text-white placeholder:text-gray-500 focus:border-[#00D4AA] focus:ring-[#00D4AA]"
-            />
-            <Button
-              type="submit"
-              disabled={!inputValue.trim() || isStreaming}
-              className="bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0] disabled:opacity-50"
+        {limitReached && !selectedConversationId ? (
+          <div className="border-t border-gray-800 p-4">
+            <UpgradeBanner feature="unlimited AI tutor sessions" />
+          </div>
+        ) : (
+          <div className="border-t border-gray-800 p-4">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSendMessage();
+              }}
+              className="flex gap-3"
             >
-              {isStreaming ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
-          </form>
-        </div>
+              <Input
+                ref={inputRef}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="Ask about investing, markets, strategies..."
+                disabled={isStreaming}
+                className="flex-1 border-gray-700 bg-[#1A2942] text-base text-white placeholder:text-gray-500 focus:border-[#00D4AA] focus:ring-[#00D4AA]"
+              />
+              <Button
+                type="submit"
+                disabled={!inputValue.trim() || isStreaming}
+                className="bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0] disabled:opacity-50"
+              >
+                {isStreaming ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </form>
+          </div>
+        )}
       </div>
     </div>
     </>

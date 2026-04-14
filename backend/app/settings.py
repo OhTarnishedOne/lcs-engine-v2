@@ -37,6 +37,15 @@ class Settings(BaseSettings):
     kalshi_api_key: Optional[str] = None
     fred_api_key: Optional[str] = None
 
+    # Email
+    resend_api_key: str = ""
+
+    # Stripe billing
+    stripe_secret_key: str = ""
+    stripe_webhook_secret: str = ""
+    stripe_pro_price_id: str = ""
+    frontend_url: str = "https://www.lcsengine.com"
+
     # App settings
     log_level: str = "INFO"
     cors_origins: str = "http://localhost:3000"
