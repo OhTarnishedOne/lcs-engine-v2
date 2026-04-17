@@ -28,10 +28,10 @@ const PRO_ROUTES = new Set(["/probability-lab", "/paper-trade"]);
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Probability Lab", href: "/probability-lab", icon: Target },
   { name: "AI Chat", href: "/chat", icon: MessageSquare },
   { name: "Strategies", href: "/strategies", icon: Layers },
   { name: "Paper Trade", href: "/paper-trade", icon: TrendingUp },
-  { name: "Probability Lab", href: "/probability-lab", icon: Target },
 ];
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
@@ -69,7 +69,13 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
               <item.icon className={cn("h-5 w-5", isActive && "text-[#00D4AA]")} />
               {item.name}
               {PRO_ROUTES.has(item.href) && !isPro && (
-                <Lock className="ml-auto h-3 w-3 text-gray-600" />
+                item.href === "/probability-lab" ? (
+                  <span className="ml-auto rounded-full bg-[#00D4AA]/20 px-1.5 py-0.5 text-[10px] font-semibold text-[#00D4AA]">
+                    PRO
+                  </span>
+                ) : (
+                  <Lock className="ml-auto h-3 w-3 text-gray-600" />
+                )
               )}
             </Link>
           );

@@ -10,6 +10,9 @@ import {
   Target,
   Lock,
   ArrowRight,
+  Crosshair,
+  Scale,
+  Lightbulb,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -260,6 +263,57 @@ export default function HomePage() {
             </div>
           </motion.div>
         </div>
+
+        {/* Probability Lab feature section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8, duration: 0.5 }}
+          className="mt-20 mb-20"
+        >
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#00D4AA]/30 bg-[#00D4AA]/10 px-3 py-1 text-xs font-medium text-[#00D4AA] mb-4">
+              <Target className="h-3 w-3" />
+              Probability Lab
+            </div>
+            <h2 className="text-3xl font-bold text-white sm:text-4xl">
+              Learn by predicting real markets
+            </h2>
+            <p className="mt-3 text-gray-400 max-w-2xl mx-auto">
+              Make predictions on real economic events, compare your judgment against market consensus, and build the probabilistic thinking that separates great investors from average ones.
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-3">
+            <div className="rounded-xl border border-gray-800 bg-[#111827] p-6 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#00D4AA]/20">
+                <Crosshair className="h-6 w-6 text-[#00D4AA]" />
+              </div>
+              <h3 className="font-semibold text-white mb-2">Predict</h3>
+              <p className="text-sm text-gray-400">
+                Assign probabilities to real CPI, Fed, and GDP events before seeing the market price.
+              </p>
+            </div>
+            <div className="rounded-xl border border-gray-800 bg-[#111827] p-6 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#00D4AA]/20">
+                <Scale className="h-6 w-6 text-[#00D4AA]" />
+              </div>
+              <h3 className="font-semibold text-white mb-2">Compare &amp; Learn</h3>
+              <p className="text-sm text-gray-400">
+                See how your forecast stacks up against market consensus. Discover overconfidence and anchoring biases.
+              </p>
+            </div>
+            <div className="rounded-xl border border-gray-800 bg-[#111827] p-6 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#00D4AA]/20">
+                <Lightbulb className="h-6 w-6 text-[#00D4AA]" />
+              </div>
+              <h3 className="font-semibold text-white mb-2">Strategize</h3>
+              <p className="text-sm text-gray-400">
+                See how your macro view translates to a hypothetical portfolio — personalized to your investor profile.
+              </p>
+            </div>
+          </div>
+        </motion.div>
 
         {/* Social proof + trust */}
         <motion.div

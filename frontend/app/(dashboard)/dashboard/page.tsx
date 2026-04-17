@@ -154,21 +154,53 @@ export default function DashboardPage() {
         </motion.div>
       )}
 
-      {/* Quick Actions */}
+      {/* Featured: Probability Lab */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
+        className="mb-6"
+      >
+        <Link href="/probability-lab">
+          <div className="group relative overflow-hidden rounded-xl border border-[#00D4AA]/30 bg-gradient-to-r from-[#00D4AA]/10 to-[#0A1628] p-6 card-hover-lift cursor-pointer">
+            <div className="flex items-start justify-between">
+              <div className="flex items-start gap-4">
+                <div className="rounded-lg bg-[#00D4AA]/20 p-3">
+                  <Target className="h-6 w-6 text-[#00D4AA]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-white">Probability Lab</h3>
+                    <span className="rounded-full bg-[#00D4AA]/20 px-2 py-0.5 text-[10px] font-semibold text-[#00D4AA]">
+                      FEATURED
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-gray-400">
+                    Predict real economic events, compare against market consensus, and discover your cognitive biases.
+                  </p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-[#00D4AA] transition-transform group-hover:translate-x-1" />
+            </div>
+          </div>
+        </Link>
+      </motion.div>
+
+      {/* Quick Actions */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
         className="mb-8"
       >
         <h2 className="mb-4 text-lg font-semibold text-white">Quick Actions</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {quickActions.map((action, index) => (
+        <div className="grid gap-4 sm:grid-cols-3">
+          {quickActions.filter(a => a.href !== "/probability-lab").map((action, index) => (
             <motion.div
               key={action.title}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 + index * 0.05 }}
+              transition={{ delay: 0.25 + index * 0.05 }}
             >
               <Link href={action.href}>
                 <div className="group h-full rounded-xl border border-gray-800 bg-[#111827] p-5 card-hover-lift cursor-pointer">
