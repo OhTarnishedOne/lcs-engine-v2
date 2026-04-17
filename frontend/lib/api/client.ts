@@ -49,7 +49,7 @@ class ApiClient {
       this.refreshToken = localStorage.getItem("refresh_token");
       // Sync cookie for middleware auth checks
       if (this.accessToken) {
-        document.cookie = `access_token=${this.accessToken}; path=/; max-age=900; SameSite=Lax`;
+        document.cookie = `access_token=${this.accessToken}; path=/; max-age=604800; SameSite=Lax`;
       }
     }
   }
@@ -63,7 +63,7 @@ class ApiClient {
     if (typeof window !== "undefined") {
       localStorage.setItem("access_token", access);
       localStorage.setItem("refresh_token", refresh);
-      document.cookie = `access_token=${access}; path=/; max-age=900; SameSite=Lax`;
+      document.cookie = `access_token=${access}; path=/; max-age=604800; SameSite=Lax`;
     }
   }
 
