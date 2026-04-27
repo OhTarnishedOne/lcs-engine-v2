@@ -516,6 +516,10 @@ class ApiClient {
     return this.get<{ tier: string; is_pro: boolean }>("/billing/status");
   }
 
+  async createPortalSession(): Promise<{ url: string }> {
+    return this.post<{ url: string }>("/billing/portal");
+  }
+
   // ============================================
   // Session Status API
   // ============================================

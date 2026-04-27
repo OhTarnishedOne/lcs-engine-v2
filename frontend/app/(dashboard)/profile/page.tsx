@@ -19,6 +19,8 @@ import { api } from "@/lib/api/client";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useBillingStatus } from "@/hooks/useBillingStatus";
+import { useManageSubscription } from "@/hooks/useManageSubscription";
 
 const INTEREST_LABELS: Record<string, string> = {
   stocks: "Individual Stocks",
@@ -70,6 +72,8 @@ export default function ProfilePage() {
   const router = useRouter();
   const isWelcome = searchParams.get("welcome") === "true";
   const { user } = useAuthStore();
+  const { isPro } = useBillingStatus();
+  const { manage, isLoading: portalLoading } = useManageSubscription();
 
   const {
     data: profile,
@@ -380,6 +384,53 @@ export default function ProfilePage() {
             {derived.learning_summary && (
               <p className="text-gray-300">{derived.learning_summary}</p>
             )}
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Subscription */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.43 }}
+      >
+        <Card className="border-gray-800 bg-[#111827] p-6">
+          <CardHeader className="p-0 pb-4">
+            <CardTitle className="flex items-center gap-2 text-white">
+              <Sparkles className="h-5 w-5 text-[#00D4AA]" />
+              Subscription
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-white font-medium">
+                  {isPro ? "Pro Plan" : "Free Plan"}
+                </p>
+                <p className="text-sm text-gray-400 mt-0.5">
+                  {isPro
+                    ? "Unlimited access to all features"
+                    : "3 AI sessions, basic features"}
+                </p>
+              </div>
+              {isPro ? (
+                <Button
+                  onClick={manage}
+                  disabled={portalLoading}
+                  variant="outline"
+                  className="border-gray-700 text-gray-300 hover:bg-[#1A2942] hover:text-white"
+                >
+                  {portalLoading ? "Loading\u2026" : "Manage Subscription"}
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => window.location.href = "/pricing"}
+                  className="bg-[#00D4AA] text-[#0A1628] hover:bg-[#00F0C0]"
+                >
+                  Upgrade to Pro
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
       </motion.div>

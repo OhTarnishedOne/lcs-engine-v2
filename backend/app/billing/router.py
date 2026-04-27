@@ -76,6 +76,31 @@ def get_billing_status(
 
 
 # ---------------------------------------------------------------------------
+# POST /api/billing/portal
+# Creates a Stripe Customer Portal session for subscription management.
+# ---------------------------------------------------------------------------
+@router.post("/portal")
+def create_portal_session(
+    current_user: User = Depends(get_current_user),
+) -> dict:
+    get_stripe()
+
+    if not current_user.stripe_customer_id:
+        raise HTTPException(status_code=400, detail="No active subscription found")
+
+    try:
+        session = stripe.billing_portal.Session.create(
+            customer=current_user.stripe_customer_id,
+            return_url=f"{settings.frontend_url}/dashboard",
+        )
+        return {"url": session.url}
+
+    except stripe.StripeError as e:
+        logger.error(f"Portal session error for user {current_user.id}: {e}")
+        raise HTTPException(status_code=502, detail="Failed to create portal session")
+
+
+# ---------------------------------------------------------------------------
 # POST /api/billing/webhook
 # Handles Stripe webhook events. No auth — verified by signature.
 # ---------------------------------------------------------------------------
@@ -133,17 +158,23 @@ def _upgrade_user(db: Session, user_id: str, stripe_customer_id: str | None = No
     if not user:
         logger.error(f"Webhook: user {user_id} not found")
         return
-    user.tier = "pro"
-    if stripe_customer_id:
+    if user.tier == "pro":
+        logger.warning(f"Webhook: user {user_id} already pro, skipping upgrade")
+    else:
+        user.tier = "pro"
+        logger.info(f"User {user_id} upgraded to pro")
+    if stripe_customer_id and user.stripe_customer_id != stripe_customer_id:
         user.stripe_customer_id = stripe_customer_id
     db.commit()
-    logger.info(f"User {user_id} upgraded to pro")
 
 
 def _upgrade_user_by_customer(db: Session, customer_id: str):
     user = db.query(User).filter(User.stripe_customer_id == customer_id).first()
     if not user:
         logger.warning(f"Webhook: no user found for customer {customer_id}")
+        return
+    if user.tier == "pro":
+        logger.warning(f"Webhook: user {user.id} already pro, skipping renewal upgrade")
         return
     user.tier = "pro"
     db.commit()
