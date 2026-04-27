@@ -9,6 +9,7 @@ import {
   BarChart3,
   LineChart,
   UserCircle,
+  Target,
   AlertTriangle,
   ExternalLink,
 } from "lucide-react";
@@ -18,6 +19,7 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Risk Profile", href: "/risk-profile", icon: UserCircle },
   { name: "Strategies", href: "/strategies", icon: Layers },
+  { name: "Probability Lab", href: "/probability-lab", icon: Target },
   { name: "Paper Trading", href: "/paper-trading", icon: TrendingUp },
   { name: "Backtesting", href: "/backtesting", icon: LineChart },
 ];
