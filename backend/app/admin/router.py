@@ -1,10 +1,15 @@
+import logging
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..deps import get_db
 from ..db.models import UserProfile
+from ..settings import get_settings
 from .schemas import OnboardingStatsResponse, DistributionItem
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -66,3 +71,38 @@ def get_onboarding_stats(db: Session = Depends(get_db)) -> OnboardingStatsRespon
         primary_goal_distribution=goal_dist,
         avg_completion_seconds=avg_completion_seconds,
     )
+
+
+@router.post("/resolve-markets")
+async def resolve_markets(db: Session = Depends(get_db)) -> dict:
+    """
+    Manually trigger market resolution. No auth (admin endpoint).
+    Backfills resolution_metadata if missing, then resolves any eligible markets.
+    """
+    settings = get_settings()
+    if not settings.fred_api_key:
+        return {"error": "FRED_API_KEY not configured", "resolved": 0}
+
+    from ..integrations.fred import FredClient
+    from ..probability.resolution import MarketAutomation
+    from ..probability.service import ProbabilityService
+
+    fred = FredClient(api_key=settings.fred_api_key)
+    try:
+        service = ProbabilityService(db)
+        automation = MarketAutomation(db, fred, service)
+
+        # Step 1: Backfill resolution metadata if any markets are missing it
+        backfilled = await automation.backfill_seed_markets()
+
+        # Step 2: Resolve eligible markets
+        result = await automation.check_and_resolve()
+
+        return {
+            "backfilled": backfilled,
+            "checked": result["checked"],
+            "resolved": len(result["resolved"]),
+            "resolved_ids": result["resolved"],
+        }
+    finally:
+        await fred.close()

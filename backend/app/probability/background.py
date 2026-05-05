@@ -20,12 +20,14 @@ logger = logging.getLogger(__name__)
 async def market_automation_loop():
     """Background loop that checks for resolutions and generates new markets.
 
-    Runs every 6 hours. Catches all exceptions so it never crashes the app.
+    Runs immediately on startup, then every 6 hours. Catches all exceptions.
     """
     settings = get_settings()
 
+    # Run first check after a short delay (let app finish startup)
+    await asyncio.sleep(30)
+
     while True:
-        await asyncio.sleep(6 * 60 * 60)  # 6 hours
 
         db = None
         fred = None
@@ -55,3 +57,6 @@ async def market_automation_loop():
                 db.close()
             if fred:
                 await fred.close()
+
+        # Wait 6 hours before next run
+        await asyncio.sleep(6 * 60 * 60)
