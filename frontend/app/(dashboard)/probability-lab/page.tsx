@@ -19,6 +19,7 @@ import {
   CheckCircle,
   AlertCircle,
   Brain,
+  HelpCircle,
   X,
 } from "lucide-react";
 
@@ -57,6 +58,7 @@ export default function ProbabilityLabPage() {
   const [selectedMarket, setSelectedMarket] = useState<PredictionMarket | null>(null);
   const [probability, setProbability] = useState(50);
   const [reasoning, setReasoning] = useState("");
+  const [showMethodology, setShowMethodology] = useState(false);
   const [showResult, setShowResult] = useState<{
     predicted: number;
     market: number;
@@ -235,9 +237,16 @@ export default function ProbabilityLabPage() {
               </div>
             )}
             {/* Secondary counters */}
-            <div className="flex gap-6 text-xs text-gray-500">
+            <div className="flex items-center gap-6 text-xs text-gray-500">
               <span>{predictionCount} predictions made</span>
               <span>{resolvedCount} resolved</span>
+              <button
+                onClick={() => setShowMethodology(true)}
+                className="flex items-center gap-1 text-gray-400 hover:text-[#00D4AA] transition-colors"
+              >
+                <HelpCircle className="h-3 w-3" />
+                How is this calculated?
+              </button>
             </div>
           </div>
         ) : (
@@ -638,6 +647,64 @@ export default function ProbabilityLabPage() {
                   </Button>
                 </>
               )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Methodology Modal */}
+      <AnimatePresence>
+        {showMethodology && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            onClick={() => setShowMethodology(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              className="w-full max-w-lg rounded-xl border border-gray-800 bg-[#111827] p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="font-semibold text-white">How Your Calibration Score Works</h3>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowMethodology(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="space-y-4 text-sm text-gray-300 leading-relaxed">
+                <p>
+                  Your <span className="font-semibold text-[#00D4AA]">Calibration Score</span> measures
+                  how well your stated probabilities match actual outcomes. A score of 100 means
+                  perfect calibration: when you said something was 70% likely, it happened about
+                  70% of the time.
+                </p>
+                <p>
+                  The score is computed from your resolved predictions over the last 90 days,
+                  weighted toward more recent activity. Predictions in the last 30 days count
+                  full weight, 30–60 days count 70%, and 60–90 days count 40%.
+                </p>
+                <p>
+                  Calibration is a different skill from being right — a calibrated forecaster who
+                  says &quot;60%&quot; is worth more than an overconfident one who says &quot;95%&quot; and is right
+                  80% of the time. The goal isn&apos;t certainty — it&apos;s honesty about uncertainty.
+                </p>
+                <div className="rounded-lg bg-[#1A2942]/50 p-3">
+                  <p className="text-xs text-gray-400">
+                    <span className="font-medium text-gray-300">Formula: </span>
+                    Score = 100 × (1 − 4 × weighted mean Brier score), clamped to 0–100.
+                    A Brier score of 0 → perfect (100), a Brier of 0.25 → baseline (0).
+                  </p>
+                </div>
+              </div>
             </motion.div>
           </motion.div>
         )}

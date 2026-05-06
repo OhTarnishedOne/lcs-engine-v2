@@ -89,6 +89,11 @@ def compute_calibration_score(
 
 def _recency_weight(created_at: datetime, now: datetime) -> float:
     """Weight: 1.0 for last 30d, 0.7 for 30-60d, 0.4 for 60-90d."""
+    # Handle mixed tz-aware/naive datetimes (SQLite stores naive)
+    if created_at.tzinfo is None and now.tzinfo is not None:
+        created_at = created_at.replace(tzinfo=UTC)
+    elif created_at.tzinfo is not None and now.tzinfo is None:
+        now = now.replace(tzinfo=UTC)
     days_ago = (now - created_at).days
     if days_ago <= 30:
         return 1.0
