@@ -85,6 +85,23 @@ class UserPrediction(Base):
     )
 
 
+class CalibrationScoreHistory(Base):
+    """Daily snapshots of a user's Calibration Score for trend display."""
+
+    __tablename__ = "calibration_score_history"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=lambda: str(uuid4())
+    )
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    score: Mapped[int] = mapped_column(Integer, nullable=False)
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, nullable=False
+    )
+
+
 class CalibrationScore(Base):
     """Aggregated calibration data for a user."""
 

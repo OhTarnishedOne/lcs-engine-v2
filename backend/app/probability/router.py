@@ -14,6 +14,7 @@ from ..integrations.fred import FredClient
 from ..settings import get_settings
 from .service import ProbabilityService
 from .resolution import MarketAutomation
+from .calibration import compute_calibration_score
 from .schemas import (
     MarketResponse,
     MarketListResponse,
@@ -171,6 +172,18 @@ async def get_calibration(
             BiasInfo(**b) for b in data["detected_biases"]
         ],
     )
+
+
+@router.get("/calibration-score")
+def get_calibration_score(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """
+    Get the user's Calibration Score (0-100), sub-scores, percentile, and trend.
+    This is the primary user-facing metric.
+    """
+    return compute_calibration_score(db, current_user.id)
 
 
 @router.post("/macro-strategy")

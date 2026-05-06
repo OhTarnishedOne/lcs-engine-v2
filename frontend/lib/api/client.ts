@@ -504,6 +504,17 @@ class ApiClient {
     return this.get<CalibrationResponse>("/probability/calibration");
   }
 
+  async getCalibrationScore(): Promise<{
+    overall_score: number | null;
+    prediction_count: number;
+    resolved_count: number;
+    percentile: number | null;
+    sub_scores: { category: string; score: number; prediction_count: number }[];
+    trend_30d: { date: string; score: number }[];
+  }> {
+    return this.get("/auth/me/calibration");
+  }
+
   // ============================================
   // Billing API
   // ============================================

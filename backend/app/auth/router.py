@@ -90,6 +90,16 @@ def get_me(current_user: User = Depends(get_current_user)) -> UserResponse:
     )
 
 
+@router.get("/me/calibration")
+def get_me_calibration(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Get the user's Calibration Score for dashboard/sidebar display."""
+    from ..probability.calibration import compute_calibration_score
+    return compute_calibration_score(db, current_user.id)
+
+
 RESET_SUCCESS_MSG = "If an account exists with this email, a reset link has been sent."
 
 

@@ -4,7 +4,7 @@ from .onboarding import UserProfile, OnboardingResponse
 from .chat import Conversation, Message
 from .strategy import Strategy, StrategyComparison
 from .trading import TradeLog
-from .probability import PredictionMarket, UserPrediction, CalibrationScore
+from .probability import PredictionMarket, UserPrediction, CalibrationScore, CalibrationScoreHistory
 from .analytics import AnalyticsEvent
 
 __all__ = [
@@ -20,6 +20,7 @@ __all__ = [
     "PredictionMarket",
     "UserPrediction",
     "CalibrationScore",
+    "CalibrationScoreHistory",
     "AnalyticsEvent",
     "PasswordResetToken",
 ]
