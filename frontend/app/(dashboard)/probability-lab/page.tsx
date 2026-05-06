@@ -30,6 +30,7 @@ import { ProGate } from "@/components/ProGate";
 import { MacroStrategyCard } from "@/components/MacroStrategyCard";
 import { UpgradeBanner } from "@/components/UpgradeBanner";
 import { useBillingStatus } from "@/hooks/useBillingStatus";
+import { useCalibrationScore } from "@/hooks/useCalibrationScore";
 import type { PredictionMarket } from "@/lib/api/types";
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -40,8 +41,18 @@ const CATEGORY_COLORS: Record<string, string> = {
   default: "bg-gray-500/20 text-gray-400 border-gray-500/30",
 };
 
+const CATEGORY_LABELS: Record<string, string> = {
+  cpi: "CPI",
+  "fed-funds-rate": "Fed Funds",
+  unemployment: "Jobs",
+  gdp: "GDP",
+  inflation: "Inflation",
+  "treasury-yields": "Treasuries",
+};
+
 export default function ProbabilityLabPage() {
   const { isPro } = useBillingStatus();
+  const { score: calibrationScore, percentile, subScores, trend, resolvedCount, predictionCount } = useCalibrationScore();
   const queryClient = useQueryClient();
   const [selectedMarket, setSelectedMarket] = useState<PredictionMarket | null>(null);
   const [probability, setProbability] = useState(50);
@@ -119,8 +130,7 @@ export default function ProbabilityLabPage() {
 
   // Calibration chart data
   const hasCalibrationData = (calibration?.calibration_curve ?? []).length > 0;
-  const resolvedCount = calibration?.resolved_predictions ?? 0;
-  const totalCount = calibration?.total_predictions ?? 0;
+  const chartResolvedCount = calibration?.resolved_predictions ?? 0;
 
   const calibrationData = [
     { predicted: 0, perfect: 0, actual: undefined as number | undefined },
@@ -173,34 +183,77 @@ export default function ProbabilityLabPage() {
         </p>
       </motion.div>
 
-      {/* Calibration Stats */}
+      {/* Calibration Score */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="mb-6 grid gap-4 sm:grid-cols-3"
+        className="mb-6"
       >
-        <div className="rounded-xl border border-gray-800 bg-[#111827] p-5">
-          <p className="text-sm text-gray-400">Total Predictions</p>
-          <p className="mt-1 text-2xl font-bold font-mono text-white">
-            {calibration?.total_predictions ?? 0}
-          </p>
-        </div>
-        <div className="rounded-xl border border-gray-800 bg-[#111827] p-5">
-          <p className="text-sm text-gray-400">Resolved</p>
-          <p className="mt-1 text-2xl font-bold font-mono text-white">
-            {calibration?.resolved_predictions ?? 0}
-          </p>
-        </div>
-        <div className="rounded-xl border border-gray-800 bg-[#111827] p-5">
-          <p className="text-sm text-gray-400">Brier Score</p>
-          <p className="mt-1 text-2xl font-bold font-mono text-white">
-            {calibration?.average_brier_score !== null
-              ? calibration?.average_brier_score.toFixed(3)
-              : "—"}
-          </p>
-          <p className="mt-1 text-xs text-gray-500">Lower is better (0 = perfect)</p>
-        </div>
+        {calibrationScore !== null ? (
+          <div className="rounded-xl border border-[#00D4AA]/20 bg-[#111827] p-6">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <p className="text-sm text-gray-400 mb-1">Calibration Score</p>
+                <p className="text-5xl font-bold font-mono-nums text-[#00D4AA]">{calibrationScore}</p>
+                {percentile !== null && (
+                  <p className="mt-2 text-sm text-gray-400">
+                    Better than {percentile}% of forecasters this month
+                  </p>
+                )}
+              </div>
+              {trend.length >= 2 && (
+                <div className="text-right">
+                  <p className="text-xs text-gray-500 mb-1">30-day trend</p>
+                  <svg width={100} height={32}>
+                    <polyline
+                      points={trend.map((d, i) => {
+                        const x = (i / (trend.length - 1)) * 100;
+                        const max = Math.max(...trend.map(t => t.score), 100);
+                        const min = Math.min(...trend.map(t => t.score), 0);
+                        const y = 32 - ((d.score - min) / (max - min || 1)) * 32;
+                        return `${x},${y}`;
+                      }).join(" ")}
+                      fill="none"
+                      stroke="#00D4AA"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </div>
+              )}
+            </div>
+            {/* Sub-scores */}
+            {subScores.length > 0 && (
+              <div className="flex flex-wrap gap-3 mb-4">
+                {subScores.map((s) => (
+                  <div key={s.category} className="rounded-lg bg-[#1A2942] px-3 py-1.5">
+                    <span className="text-xs text-gray-400">{CATEGORY_LABELS[s.category] || s.category}: </span>
+                    <span className="text-xs font-semibold text-[#00D4AA]">{s.score}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* Secondary counters */}
+            <div className="flex gap-6 text-xs text-gray-500">
+              <span>{predictionCount} predictions made</span>
+              <span>{resolvedCount} resolved</span>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-[#00D4AA]/20 bg-[#00D4AA]/5 p-6 text-center">
+            <Target className="mx-auto mb-3 h-8 w-8 text-[#00D4AA]" />
+            <h3 className="text-base font-semibold text-white">Build your Calibration Score</h3>
+            <p className="mt-1 text-sm text-gray-400">
+              {resolvedCount > 0
+                ? `${5 - resolvedCount} more resolved predictions needed`
+                : "Make at least 5 predictions to start your score"}
+            </p>
+            <p className="mt-3 text-xs text-gray-500">
+              {predictionCount} predictions made · {resolvedCount} resolved
+            </p>
+          </div>
+        )}
       </motion.div>
 
       {/* Markets Grid */}

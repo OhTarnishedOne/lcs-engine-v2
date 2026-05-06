@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useUIStore } from "@/stores/ui-store";
 import { useBillingStatus } from "@/hooks/useBillingStatus";
+import { useCalibrationScore } from "@/hooks/useCalibrationScore";
 
 const PRO_ROUTES = new Set(["/probability-lab", "/paper-trade"]);
 
@@ -107,6 +108,18 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+function CalibrationBadge() {
+  const { score } = useCalibrationScore();
+  if (score === null) return null;
+  return (
+    <Link href="/probability-lab" className="flex items-center gap-2 rounded-lg bg-[#1A2942] px-3 py-2 hover:bg-[#1A2942]/80 transition-colors">
+      <Target className="h-4 w-4 text-[#00D4AA]" />
+      <span className="text-xs text-gray-400">Calibration</span>
+      <span className="ml-auto text-sm font-bold font-mono-nums text-[#00D4AA]">{score}</span>
+    </Link>
+  );
+}
+
 export function Sidebar() {
   return (
     <aside className="hidden w-64 flex-shrink-0 border-r border-gray-800 bg-[#0A1628] lg:flex lg:flex-col">
@@ -122,6 +135,11 @@ export function Sidebar() {
         {/* Navigation */}
         <div className="flex flex-1 flex-col overflow-y-auto py-2">
           <NavLinks />
+        </div>
+
+        {/* Calibration Score Badge */}
+        <div className="px-3 pb-2">
+          <CalibrationBadge />
         </div>
 
         {/* Version */}
