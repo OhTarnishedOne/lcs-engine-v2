@@ -87,7 +87,7 @@ class TestCalibrationScoreComputation:
         assert result["overall_score"] == 100
 
     def test_uniform_50_50_predictions_on_resolved_events(self, db):
-        """Predicting 50% on everything that resolves yes gives Brier=0.25 → score=0."""
+        """Predicting 50% on everything that resolves yes gives Brier=0.25 → score=50."""
         user = _create_user(db)
         for i in range(5):
             market = _create_resolved_market(db, f"Market {i}", resolution="yes")
@@ -95,7 +95,7 @@ class TestCalibrationScoreComputation:
             _create_prediction(db, user.id, market.id, 0.5, 0.25, days_ago=i + 1)
 
         result = compute_calibration_score(db, user.id)
-        assert result["overall_score"] == 0
+        assert result["overall_score"] == 50
 
     def test_recency_weighting_recent_predictions_count_more(self, db):
         user = _create_user(db)
@@ -252,9 +252,14 @@ class TestHelpers:
     def test_brier_to_score_perfect(self):
         assert _brier_to_score(0.0) == 100
 
+    def test_brier_to_score_coinflip(self):
+        # 0.25 → 100 * (1 - 2*0.25) = 50
+        assert _brier_to_score(0.25) == 50
+
     def test_brier_to_score_worst(self):
-        assert _brier_to_score(0.25) == 0
+        # 0.5 → 100 * (1 - 2*0.5) = 0
+        assert _brier_to_score(0.5) == 0
 
     def test_brier_to_score_mid(self):
-        # 0.125 → 100 * (1 - 4*0.125) = 50
-        assert _brier_to_score(0.125) == 50
+        # 0.125 → 100 * (1 - 2*0.125) = 75
+        assert _brier_to_score(0.125) == 75

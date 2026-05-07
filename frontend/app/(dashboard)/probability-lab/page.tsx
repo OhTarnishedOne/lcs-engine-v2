@@ -198,8 +198,15 @@ export default function ProbabilityLabPage() {
               <div>
                 <p className="text-sm text-gray-400 mb-1">Calibration Score</p>
                 <p className="text-5xl font-bold font-mono-nums text-[#00D4AA]">{calibrationScore}</p>
+                <p className="mt-1 text-sm text-gray-300">
+                  {calibrationScore >= 80 ? "Excellent calibration" :
+                   calibrationScore >= 60 ? "Good calibration" :
+                   calibrationScore >= 40 ? "Average — room to grow" :
+                   calibrationScore >= 20 ? "Below average — work on confidence" :
+                   "Poor calibration — review your reasoning"}
+                </p>
                 {percentile !== null && (
-                  <p className="mt-2 text-sm text-gray-400">
+                  <p className="mt-1 text-sm text-gray-400">
                     Better than {percentile}% of forecasters this month
                   </p>
                 )}
@@ -700,8 +707,8 @@ export default function ProbabilityLabPage() {
                 <div className="rounded-lg bg-[#1A2942]/50 p-3">
                   <p className="text-xs text-gray-400">
                     <span className="font-medium text-gray-300">Formula: </span>
-                    Score = 100 × (1 − 4 × weighted mean Brier score), clamped to 0–100.
-                    A Brier score of 0 → perfect (100), a Brier of 0.25 → baseline (0).
+                    Score = 100 × (1 − 2 × weighted mean Brier score), clamped to 0–100.
+                    Perfect predictions → 100, coin-flip accuracy → 50, worst case → 0.
                   </p>
                 </div>
               </div>

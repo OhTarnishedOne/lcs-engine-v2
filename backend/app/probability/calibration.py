@@ -105,9 +105,9 @@ def _recency_weight(created_at: datetime, now: datetime) -> float:
 
 def _brier_to_score(weighted_mean_brier: float) -> int:
     """Transform weighted mean Brier to 0-100 scale.
-    Perfect calibration (0.0) → 100, maximally bad (0.25) → 0.
+    Perfect calibration (0.0) → 100, coin-flip (0.25) → 50, worst (0.5) → 0.
     """
-    score = 100 * (1 - 4 * weighted_mean_brier)
+    score = 100 * (1 - 2 * weighted_mean_brier)
     return max(0, min(100, round(score)))
 
 
