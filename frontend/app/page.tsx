@@ -315,23 +315,14 @@ export default function HomePage() {
           </div>
         </motion.div>
 
-        {/* Social proof + trust */}
+        {/* Trust footer */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1 }}
           className="mt-20 border-t border-gray-800 pt-10"
         >
-          <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:justify-center sm:gap-8 sm:text-left">
-            <span className="text-sm text-gray-400">
-              6 active learners &middot; 83% onboarding completion &middot; Institutional pilots in progress
-            </span>
-            <span className="hidden h-4 w-px bg-gray-700 sm:block" />
-            <span className="text-sm text-gray-400">
-              Built by a Columbia MBA. Backed by real market data.
-            </span>
-          </div>
-          <div className="mt-6 flex items-center justify-center gap-1.5 text-xs text-gray-500">
+          <div className="flex items-center justify-center gap-1.5 text-xs text-gray-500">
             <Lock className="h-3 w-3" />
             <span>
               Secure authentication &middot; Real-time data powered by Alpaca
