@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .settings import get_settings
 from .database import SessionLocal
 from .auth.router import router as auth_router
+from .auth.demo import router as demo_router
 from .users.router import router as users_router
 from .onboarding.router import router as onboarding_router
 from .chat.router import router as chat_router
@@ -85,6 +86,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(auth_router, prefix="/api")
+app.include_router(demo_router, prefix="/api")
 app.include_router(users_router, prefix="/api")
 app.include_router(onboarding_router, prefix="/api")
 app.include_router(chat_router, prefix="/api/chat")

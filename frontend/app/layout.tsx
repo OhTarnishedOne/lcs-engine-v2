@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/components/providers";
 import { Toaster } from "@/components/ui/sonner";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { DemoBanner } from "@/components/DemoBanner";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -33,6 +34,7 @@ export default function RootLayout({
       <body className={`${plusJakarta.variable} ${jetbrainsMono.variable} font-sans antialiased`}>
         <QueryProvider>
           <AuthProvider>
+            <DemoBanner />
             {children}
             <Toaster
               position="top-right"
