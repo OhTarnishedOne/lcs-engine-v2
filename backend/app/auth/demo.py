@@ -50,7 +50,7 @@ def _get_or_create_demo_user(db: Session) -> User:
         persona="goal_focused",
         experience_level="intermediate",
         biggest_barrier="dont_know_where_to_start",
-        primary_goal="Build long-term wealth through informed investing decisions",
+        primary_goal="build_wealth",
         risk_tolerance="moderate",
         learning_preference="visual",
         time_horizon="3_to_5_years",
