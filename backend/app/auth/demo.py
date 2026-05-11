@@ -64,13 +64,23 @@ def _get_or_create_demo_user(db: Session) -> User:
     )
     db.add(user_profile)
 
-    # Create sample conversations
-    _seed_conversations(db, user.id)
-
-    # Create sample predictions (will be linked to existing markets)
-    _seed_predictions(db, user.id)
-
     db.commit()
+
+    # Seed data in separate transactions so failures don't block user creation
+    try:
+        _seed_conversations(db, user.id)
+        db.commit()
+    except Exception as e:
+        logger.warning(f"Demo conversation seeding failed: {e}")
+        db.rollback()
+
+    try:
+        _seed_predictions(db, user.id)
+        db.commit()
+    except Exception as e:
+        logger.warning(f"Demo prediction seeding failed: {e}")
+        db.rollback()
+
     logger.info(f"Demo user created: {DEMO_EMAIL}")
     return user
 
@@ -174,7 +184,15 @@ def demo_login(db: Session = Depends(get_db)) -> TokenResponse:
     No-auth endpoint that returns a valid session for the demo user.
     Auto-creates the demo user with seeded data on first call.
     """
-    user = _get_or_create_demo_user(db)
+    try:
+        user = _get_or_create_demo_user(db)
+    except Exception as e:
+        logger.error(f"Demo user creation failed: {type(e).__name__}: {e}")
+        db.rollback()
+        # Try to just fetch the user if creation failed (partial create)
+        user = db.query(User).filter(User.email == DEMO_EMAIL).first()
+        if not user:
+            raise
 
     token_data = {"sub": user.id, "email": user.email}
     return TokenResponse(
