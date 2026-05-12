@@ -13,8 +13,11 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get("access_token")?.value;
   const hostname = request.headers.get("host") || "";
 
-  // Demo subdomain: skip all auth redirects (auto-login happens client-side)
+  // Demo subdomain: redirect root to dashboard, skip auth for all other routes
   if (hostname.includes("demo.")) {
+    if (pathname === "/" || pathname === "/login" || pathname === "/register") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
     return NextResponse.next();
   }
 

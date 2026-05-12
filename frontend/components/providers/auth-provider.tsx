@@ -16,12 +16,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function init() {
       if (isDemo()) {
-        // Try to resume existing guest session
         const savedGuestId = localStorage.getItem("demo_guest_id");
 
         if (api.isAuthenticated()) {
-          // Already have a token — just fetch user
           await fetchUser();
+          useAuthStore.setState({ isLoading: false });
           return;
         }
 
@@ -40,8 +39,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await fetchUser();
         } catch (e) {
           console.error("Demo auto-login failed:", e);
-          // Clear stale guest ID and retry once
           localStorage.removeItem("demo_guest_id");
+        } finally {
+          useAuthStore.setState({ isLoading: false });
         }
       } else {
         await initialize();
