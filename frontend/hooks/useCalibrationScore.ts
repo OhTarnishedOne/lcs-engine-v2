@@ -11,6 +11,7 @@ export interface CalibrationData {
   percentile: number | null;
   sub_scores: { category: string; score: number; prediction_count: number }[];
   trend_30d: { date: string; score: number }[];
+  is_first_score_view: boolean;
 }
 
 export function useCalibrationScore() {
@@ -30,6 +31,7 @@ export function useCalibrationScore() {
     percentile: data?.percentile ?? null,
     subScores: data?.sub_scores ?? [],
     trend: data?.trend_30d ?? [],
+    isFirstScoreView: data?.is_first_score_view ?? false,
     isLoading,
   };
 }

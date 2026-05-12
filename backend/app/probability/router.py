@@ -186,6 +186,17 @@ def get_calibration_score(
     return compute_calibration_score(db, current_user.id)
 
 
+@router.post("/calibration-score/dismiss-first")
+def dismiss_first_score(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Mark first-score celebration as seen."""
+    current_user.has_seen_first_score = True
+    db.commit()
+    return {"dismissed": True}
+
+
 @router.post("/macro-strategy")
 async def get_macro_strategy(
     request: MacroStrategyRequest,

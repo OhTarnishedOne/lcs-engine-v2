@@ -11,7 +11,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
-from ..db.models import UserPrediction, PredictionMarket, CalibrationScoreHistory, User
+from ..db.models import User, UserPrediction, PredictionMarket, CalibrationScoreHistory
 
 
 def compute_calibration_score(
@@ -63,6 +63,7 @@ def compute_calibration_score(
             "percentile": None,
             "sub_scores": [],
             "trend_30d": _get_trend(db, user_id),
+            "is_first_score_view": False,
         }
 
     # Compute weighted mean Brier score
@@ -77,6 +78,12 @@ def compute_calibration_score(
     # Save daily snapshot (idempotent — one per day)
     _save_snapshot(db, user_id, overall_score, now)
 
+    # Check if this is the first time the user sees a computed score
+    user = db.query(User).filter(User.id == user_id).first()
+    is_first = False
+    if user and not user.has_seen_first_score:
+        is_first = True
+
     return {
         "overall_score": overall_score,
         "prediction_count": prediction_count,
@@ -84,6 +91,7 @@ def compute_calibration_score(
         "percentile": percentile,
         "sub_scores": sub_scores,
         "trend_30d": _get_trend(db, user_id),
+        "is_first_score_view": is_first,
     }
 
 

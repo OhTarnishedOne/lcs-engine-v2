@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { Target, ArrowRight, TrendingUp } from "lucide-react";
 import { useCalibrationScore } from "@/hooks/useCalibrationScore";
+import { InfoTip } from "@/components/InfoTip";
+
+const SCORE_TOOLTIP = "A measure of how well your confidence matches reality \u2014 the skill that separates great investors from lucky ones.";
 
 function MiniSparkline({ data }: { data: { score: number }[] }) {
   if (data.length < 2) return null;
@@ -98,10 +101,12 @@ export function CalibrationScoreCard({ compact = false }: Props) {
       <div className="group rounded-xl border border-[#00D4AA]/20 bg-[#111827] p-6 card-hover-lift cursor-pointer">
         <div className="flex items-start justify-between">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Target className="h-5 w-5 text-[#00D4AA]" />
-              <p className="text-sm text-gray-400">Calibration Score</p>
-            </div>
+            <InfoTip content={SCORE_TOOLTIP}>
+              <div className="flex items-center gap-2 mb-1 cursor-help">
+                <Target className="h-5 w-5 text-[#00D4AA]" />
+                <p className="text-sm text-gray-400 border-b border-dashed border-gray-600">Calibration Score</p>
+              </div>
+            </InfoTip>
             <p className="text-4xl font-bold font-mono-nums text-[#00D4AA]">{score}</p>
             {percentile !== null && (
               <p className="mt-1 text-xs text-gray-400">

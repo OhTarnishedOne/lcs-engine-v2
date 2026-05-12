@@ -29,6 +29,9 @@ class User(Base):
         String(100), unique=True, nullable=True, index=True
     )
 
+    # Calibration
+    has_seen_first_score: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
     # Guest/demo sessions
     is_guest: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     guest_created_at: Mapped[datetime | None] = mapped_column(

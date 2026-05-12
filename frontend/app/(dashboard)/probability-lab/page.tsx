@@ -32,6 +32,7 @@ import { MacroStrategyCard } from "@/components/MacroStrategyCard";
 import { UpgradeBanner } from "@/components/UpgradeBanner";
 import { useBillingStatus } from "@/hooks/useBillingStatus";
 import { useCalibrationScore } from "@/hooks/useCalibrationScore";
+import { InfoTip } from "@/components/InfoTip";
 import type { PredictionMarket } from "@/lib/api/types";
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -51,9 +52,23 @@ const CATEGORY_LABELS: Record<string, string> = {
   "treasury-yields": "Treasuries",
 };
 
+const CATEGORY_TOOLTIPS: Record<string, string> = {
+  cpi: "Your calibration on inflation-related predictions.",
+  "fed-funds-rate": "Your calibration on Federal Reserve rate decisions.",
+  gdp: "Your calibration on US economic growth predictions.",
+  unemployment: "Your calibration on labor market predictions.",
+  inflation: "Your calibration on broad inflation predictions.",
+  "treasury-yields": "Your calibration on bond market predictions.",
+  recession: "Your calibration on recession predictions.",
+};
+
+const SCORE_TOOLTIP = "A measure of how well your confidence matches reality \u2014 the skill that separates great investors from lucky ones.";
+const BIASES_TOOLTIP = "Patterns in your prediction history that suggest systematic biases. Each bias is a place where your reasoning may be consistently off.";
+
 export default function ProbabilityLabPage() {
   const { isPro } = useBillingStatus();
-  const { score: calibrationScore, percentile, subScores, trend, resolvedCount, predictionCount } = useCalibrationScore();
+  const { score: calibrationScore, percentile, subScores, trend, resolvedCount, predictionCount, isFirstScoreView } = useCalibrationScore();
+  const isDemo = typeof window !== "undefined" && window.location.hostname.includes("demo.");
   const queryClient = useQueryClient();
   const [selectedMarket, setSelectedMarket] = useState<PredictionMarket | null>(null);
   const [probability, setProbability] = useState(50);
@@ -194,9 +209,26 @@ export default function ProbabilityLabPage() {
       >
         {calibrationScore !== null ? (
           <div className="rounded-xl border border-[#00D4AA]/20 bg-[#111827] p-6">
+            {/* Touchpoint 2: First-score celebration */}
+            {isFirstScoreView && (
+              <div className="mb-4 rounded-lg border border-[#00D4AA]/20 bg-[#00D4AA]/5 p-4 text-center">
+                <p className="text-sm font-semibold text-[#00D4AA]">You&apos;ve earned your first Calibration Score.</p>
+                <p className="text-xs text-gray-400 mt-1">Here&apos;s what it tells us about how you reason.</p>
+              </div>
+            )}
+
+            {/* Touchpoint 5: Demo guest copy */}
+            {isDemo && (
+              <p className="mb-4 text-sm text-gray-400 leading-relaxed">
+                This is the Calibration Score of a user who&apos;s made ~10 predictions over the past month. It updates as predictions resolve and reasoning sharpens. Your own score builds the same way when you claim your account.
+              </p>
+            )}
+
             <div className="flex items-start justify-between mb-4">
               <div>
-                <p className="text-sm text-gray-400 mb-1">Calibration Score</p>
+                <InfoTip content={SCORE_TOOLTIP}>
+                  <p className="text-sm text-gray-400 mb-1 cursor-help border-b border-dashed border-gray-600">Calibration Score</p>
+                </InfoTip>
                 <p className="text-5xl font-bold font-mono-nums text-[#00D4AA]">{calibrationScore}</p>
                 <p className="mt-1 text-sm text-gray-300">
                   {calibrationScore >= 80 ? "Excellent calibration" :
@@ -216,10 +248,10 @@ export default function ProbabilityLabPage() {
                   <p className="text-xs text-gray-500 mb-1">30-day trend</p>
                   <svg width={100} height={32}>
                     <polyline
-                      points={trend.map((d, i) => {
+                      points={trend.map((d: { score: number }, i: number) => {
                         const x = (i / (trend.length - 1)) * 100;
-                        const max = Math.max(...trend.map(t => t.score), 100);
-                        const min = Math.min(...trend.map(t => t.score), 0);
+                        const max = Math.max(...trend.map((t: { score: number }) => t.score), 100);
+                        const min = Math.min(...trend.map((t: { score: number }) => t.score), 0);
                         const y = 32 - ((d.score - min) / (max - min || 1)) * 32;
                         return `${x},${y}`;
                       }).join(" ")}
@@ -232,14 +264,16 @@ export default function ProbabilityLabPage() {
                 </div>
               )}
             </div>
-            {/* Sub-scores */}
+            {/* Touchpoint 4: Sub-scores with category tooltips */}
             {subScores.length > 0 && (
               <div className="flex flex-wrap gap-3 mb-4">
-                {subScores.map((s) => (
-                  <div key={s.category} className="rounded-lg bg-[#1A2942] px-3 py-1.5">
-                    <span className="text-xs text-gray-400">{CATEGORY_LABELS[s.category] || s.category}: </span>
-                    <span className="text-xs font-semibold text-[#00D4AA]">{s.score}</span>
-                  </div>
+                {subScores.map((s: { category: string; score: number; prediction_count: number }) => (
+                  <InfoTip key={s.category} content={CATEGORY_TOOLTIPS[s.category] || `Your calibration on ${s.category} predictions.`}>
+                    <div className="rounded-lg bg-[#1A2942] px-3 py-1.5 cursor-help">
+                      <span className="text-xs text-gray-400">{CATEGORY_LABELS[s.category] || s.category}: </span>
+                      <span className="text-xs font-semibold text-[#00D4AA]">{s.score}</span>
+                    </div>
+                  </InfoTip>
                 ))}
               </div>
             )}
@@ -257,17 +291,28 @@ export default function ProbabilityLabPage() {
             </div>
           </div>
         ) : (
-          <div className="rounded-xl border border-[#00D4AA]/20 bg-[#00D4AA]/5 p-6 text-center">
-            <Target className="mx-auto mb-3 h-8 w-8 text-[#00D4AA]" />
-            <h3 className="text-base font-semibold text-white">Build your Calibration Score</h3>
-            <p className="mt-1 text-sm text-gray-400">
-              {resolvedCount > 0
-                ? `${5 - resolvedCount} more resolved predictions needed`
-                : "Make at least 5 predictions to start your score"}
-            </p>
-            <p className="mt-3 text-xs text-gray-500">
-              {predictionCount} predictions made · {resolvedCount} resolved
-            </p>
+          /* Touchpoint 1: Empty state with motivating copy */
+          <div className="rounded-xl border border-[#00D4AA]/20 bg-[#00D4AA]/5 p-6">
+            <div className="flex items-start gap-4">
+              <Target className="h-8 w-8 shrink-0 text-[#00D4AA] mt-1" />
+              <div>
+                <h3 className="text-lg font-semibold text-white">Calibration Score</h3>
+                <p className="text-sm text-[#00D4AA] mb-3">Coming after {5 - resolvedCount} more resolved predictions</p>
+                <p className="text-sm text-gray-400 leading-relaxed mb-4">
+                  Most financial education teaches what to think about markets. The Calibration Score measures <em>how</em> you think under uncertainty — whether your stated confidence matches what actually happens. Make predictions on the markets below. As they resolve, you&apos;ll see where your reasoning is sharp and where it&apos;s biased.
+                </p>
+                <div className="flex items-center gap-6 text-xs text-gray-500">
+                  <span>{resolvedCount} / 5 resolved</span>
+                  <span>{predictionCount} active</span>
+                  <button
+                    onClick={() => setShowMethodology(true)}
+                    className="flex items-center gap-1 text-gray-400 hover:text-[#00D4AA] transition-colors"
+                  >
+                    Why does this matter? →
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </motion.div>
@@ -421,10 +466,12 @@ export default function ProbabilityLabPage() {
 
           {/* Detected Biases */}
           <div className="rounded-xl border border-gray-800 bg-[#111827] p-5">
-            <h3 className="mb-4 flex items-center gap-2 font-semibold text-white">
-              <Brain className="h-5 w-5 text-[#00D4AA]" />
-              Detected Biases
-            </h3>
+            <InfoTip content={BIASES_TOOLTIP}>
+              <h3 className="mb-4 flex items-center gap-2 font-semibold text-white cursor-help border-b border-dashed border-transparent hover:border-gray-600 inline-flex">
+                <Brain className="h-5 w-5 text-[#00D4AA]" />
+                Detected Biases
+              </h3>
+            </InfoTip>
             {!calibration?.detected_biases || calibration.detected_biases.length === 0 ? (
               <div className="rounded-lg bg-[#1A2942]/50 p-4 text-center">
                 <p className="text-sm text-gray-400">
@@ -687,28 +734,54 @@ export default function ProbabilityLabPage() {
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-              <div className="space-y-4 text-sm text-gray-300 leading-relaxed">
-                <p>
-                  Your <span className="font-semibold text-[#00D4AA]">Calibration Score</span> measures
-                  how well your stated probabilities match actual outcomes. A score of 100 means
-                  perfect calibration: when you said something was 70% likely, it happened about
-                  70% of the time.
-                </p>
-                <p>
-                  The score is computed from your resolved predictions over the last 90 days,
-                  weighted toward more recent activity. Predictions in the last 30 days count
-                  full weight, 30–60 days count 70%, and 60–90 days count 40%.
-                </p>
-                <p>
-                  Calibration is a different skill from being right — a calibrated forecaster who
-                  says &quot;60%&quot; is worth more than an overconfident one who says &quot;95%&quot; and is right
-                  80% of the time. The goal isn&apos;t certainty — it&apos;s honesty about uncertainty.
-                </p>
+              <div className="space-y-5 text-sm text-gray-300 leading-relaxed max-h-[70vh] overflow-y-auto">
+                {/* Why it matters */}
+                <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-[#00D4AA] mb-2">Why it matters</h4>
+                  <p>
+                    Calibration is the skill of matching your confidence to reality. When a calibrated
+                    thinker says something is 70% likely, it happens about 70% of the time. When an
+                    overconfident thinker says the same thing, they&apos;re often wrong — but loudly.
+                  </p>
+                  <p className="mt-2">
+                    This skill is what separates great investors, forecasters, and decision-makers from
+                    people who are occasionally right by accident. It&apos;s also a skill that almost no
+                    education system teaches directly. LCS Engine measures it through deliberate practice
+                    on real markets.
+                  </p>
+                </div>
+
+                {/* How it's measured */}
+                <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-[#00D4AA] mb-2">How it&apos;s measured</h4>
+                  <p>
+                    Your score (0–100) is derived from your resolved predictions over the last 90 days.
+                    Recent predictions count more than older ones. We require a minimum of 5 resolved
+                    predictions before computing the score — anything less is statistical noise.
+                  </p>
+                  <p className="mt-2">
+                    Sub-scores break the metric down by question category (macro events, inflation,
+                    employment, etc.) so you can see where your reasoning is strongest and where it
+                    has room to grow.
+                  </p>
+                </div>
+
+                {/* How to improve */}
+                <div>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-[#00D4AA] mb-2">How to improve it</h4>
+                  <p>
+                    Make more predictions. The score improves through deliberate practice, not study.
+                    Pay attention to your detected biases — they tell you where your reasoning is
+                    systematically off.
+                  </p>
+                </div>
+
+                {/* Technical detail */}
                 <div className="rounded-lg bg-[#1A2942]/50 p-3">
                   <p className="text-xs text-gray-400">
-                    <span className="font-medium text-gray-300">Formula: </span>
+                    <span className="font-medium text-gray-300">Technical: </span>
                     Score = 100 × (1 − 2 × weighted mean Brier score), clamped to 0–100.
-                    Perfect predictions → 100, coin-flip accuracy → 50, worst case → 0.
+                    Recency weights: 30d = 1.0, 30–60d = 0.7, 60–90d = 0.4.
                   </p>
                 </div>
               </div>
