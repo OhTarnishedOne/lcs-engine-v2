@@ -264,31 +264,69 @@ def _seed_conversations(db: Session, user_id: str):
 
 
 def _seed_predictions(db: Session, user_id: str):
-    """Seed probability lab predictions on existing markets."""
-    markets = db.query(PredictionMarket).limit(7).all()
-    if not markets:
-        return
+    """Seed probability lab predictions with guaranteed resolved data.
 
-    prediction_data = [
-        (0.70, 0.09),
-        (0.55, 0.2025),
-        (0.80, 0.04),
-        (0.45, 0.3025),
-        (0.60, 0.16),
+    Creates demo-only resolved markets so the Calibration Score always
+    renders for guest users, regardless of the real market state.
+    """
+    now = datetime.now(UTC)
+
+    # Demo-resolved markets: these exist only to give guests a working
+    # Calibration Score. They're resolved, have known outcomes.
+    demo_markets = [
+        {"title": "CPI YoY above 3.0% — Feb 2026", "category": "cpi", "resolution": "yes"},
+        {"title": "Fed funds rate below 4.5% — Feb 2026", "category": "fed-funds-rate", "resolution": "yes"},
+        {"title": "Unemployment below 4.5% — Feb 2026", "category": "unemployment", "resolution": "yes"},
+        {"title": "10-yr Treasury yield above 4.0% — Feb 2026", "category": "treasury-yields", "resolution": "yes"},
+        {"title": "Core PCE below 2.5% — Feb 2026", "category": "inflation", "resolution": "no"},
+        {"title": "GDP growth above 2.0% — Q4 2025", "category": "gdp", "resolution": "yes"},
     ]
 
-    for i, market in enumerate(markets[:5]):
-        if i < len(prediction_data):
-            prob, brier = prediction_data[i]
-            pred = UserPrediction(
-                user_id=user_id,
-                market_id=market.id,
-                predicted_probability=prob,
-                brier_score=brier if market.is_resolved else None,
-            )
-            db.add(pred)
+    # Predictions with varying quality — produces a realistic Calibration Score
+    # (prob, brier_score) — brier = (prob - outcome)^2
+    resolved_predictions = [
+        (0.75, 0.0625),   # Good call on CPI (outcome=1, brier=(0.75-1)^2)
+        (0.80, 0.0400),   # Strong call on Fed (outcome=1)
+        (0.70, 0.0900),   # Decent on unemployment (outcome=1)
+        (0.55, 0.2025),   # Mediocre on treasuries (outcome=1)
+        (0.60, 0.3600),   # Wrong direction on PCE (outcome=0, brier=(0.60-0)^2)
+        (0.65, 0.1225),   # Good on GDP (outcome=1)
+    ]
 
-    for market in markets[5:7]:
+    created_market_ids = []
+    for mkt_data in demo_markets:
+        market = PredictionMarket(
+            title=mkt_data["title"],
+            category=mkt_data["category"],
+            close_date=now - timedelta(days=30),
+            is_resolved=True,
+            resolution=mkt_data["resolution"],
+            description=f"Demo market for guest calibration ({mkt_data['category']})",
+        )
+        db.add(market)
+        db.flush()
+        created_market_ids.append(market.id)
+
+    # Attach resolved predictions
+    for i, market_id in enumerate(created_market_ids):
+        prob, brier = resolved_predictions[i]
+        pred = UserPrediction(
+            user_id=user_id,
+            market_id=market_id,
+            predicted_probability=prob,
+            brier_score=brier,
+            created_at=now - timedelta(days=20 - i),  # Spread across last 20 days
+        )
+        db.add(pred)
+
+    # Also attach 2 pending predictions on real active markets
+    active_markets = (
+        db.query(PredictionMarket)
+        .filter(PredictionMarket.is_resolved == False)
+        .limit(2)
+        .all()
+    )
+    for market in active_markets:
         pred = UserPrediction(
             user_id=user_id,
             market_id=market.id,
@@ -297,13 +335,39 @@ def _seed_predictions(db: Session, user_id: str):
         )
         db.add(pred)
 
-    resolved_preds = [d for i, d in enumerate(prediction_data) if i < len(markets) and markets[i].is_resolved]
-    if resolved_preds:
-        avg_brier = sum(b for _, b in resolved_preds) / len(resolved_preds)
-        cal = CalibrationScore(
-            user_id=user_id,
-            total_predictions=min(7, len(markets)),
-            resolved_predictions=len(resolved_preds),
-            average_brier_score=avg_brier,
-        )
-        db.add(cal)
+    # Build calibration score record
+    avg_brier = sum(b for _, b in resolved_predictions) / len(resolved_predictions)
+    calibration_buckets = []
+    for i in range(10):
+        bucket_preds = [(p, b) for p, b in resolved_predictions if int(p * 10) == i]
+        if bucket_preds:
+            # Get the actual outcome for each prediction
+            outcomes = []
+            for j, (_, _) in enumerate(resolved_predictions):
+                if int(resolved_predictions[j][0] * 10) == i:
+                    outcomes.append(1 if demo_markets[j]["resolution"] == "yes" else 0)
+            if outcomes:
+                calibration_buckets.append({
+                    "bucket_start": i / 10,
+                    "bucket_end": (i + 1) / 10,
+                    "predicted_avg": sum(p for p, _ in bucket_preds) / len(bucket_preds),
+                    "actual_rate": sum(outcomes) / len(outcomes),
+                    "count": len(bucket_preds),
+                })
+
+    # Detect biases from the prediction set
+    biases = []
+    probs = [p for p, _ in resolved_predictions]
+    # Check for extreme aversion
+    if not any(p < 0.15 for p in probs) and not any(p > 0.85 for p in probs):
+        biases.append("extreme_aversion")
+
+    cal = CalibrationScore(
+        user_id=user_id,
+        total_predictions=len(resolved_predictions) + len(active_markets),
+        resolved_predictions=len(resolved_predictions),
+        average_brier_score=avg_brier,
+        calibration_data=calibration_buckets,
+        detected_biases=biases,
+    )
+    db.add(cal)
