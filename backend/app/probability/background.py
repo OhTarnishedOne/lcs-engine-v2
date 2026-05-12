@@ -53,10 +53,22 @@ async def market_automation_loop():
         except Exception as e:
             logger.error(f"Market automation error: {e}")
         finally:
-            if db:
-                db.close()
             if fred:
                 await fred.close()
+
+        # 3. Cleanup expired guest accounts (30+ days post-expiry)
+        try:
+            if db is None:
+                db = SessionLocal()
+            from ..auth.demo import cleanup_expired_guests
+            deleted = await cleanup_expired_guests(db)
+            if deleted:
+                logger.info(f"Cleaned up {deleted} expired guest accounts")
+        except Exception as e:
+            logger.error(f"Guest cleanup error: {e}")
+        finally:
+            if db:
+                db.close()
 
         # Wait 6 hours before next run
         await asyncio.sleep(6 * 60 * 60)

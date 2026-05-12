@@ -36,3 +36,6 @@ class UserResponse(BaseModel):
     id: str
     email: str
     created_at: str
+    is_guest: bool = False
+    guest_expires_at: str | None = None
+    days_remaining: int | None = None

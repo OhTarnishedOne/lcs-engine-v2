@@ -83,10 +83,19 @@ def refresh_token(data: TokenRefresh, db: Session = Depends(get_db)) -> TokenRes
 
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: User = Depends(get_current_user)) -> UserResponse:
+    days_remaining = None
+    if current_user.is_guest and current_user.guest_expires_at:
+        from datetime import datetime, UTC
+        delta = current_user.guest_expires_at - datetime.now(UTC)
+        days_remaining = max(0, delta.days + 1)
+
     return UserResponse(
         id=current_user.id,
         email=current_user.email,
         created_at=current_user.created_at.isoformat(),
+        is_guest=current_user.is_guest,
+        guest_expires_at=current_user.guest_expires_at.isoformat() if current_user.guest_expires_at else None,
+        days_remaining=days_remaining,
     )
 
 

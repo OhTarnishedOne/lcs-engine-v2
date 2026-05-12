@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,6 +26,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useAuthStore } from "@/stores/auth-store";
+import { api } from "@/lib/api/client";
 import { trackEvent } from "@/lib/analytics";
 
 const registerSchema = z
@@ -49,11 +50,16 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const register = useAuthStore((state) => state.register);
+  const fetchUser = useAuthStore((state) => state.fetchUser);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const isGuestClaim = searchParams.get("from") === "demo";
+  const guestId = searchParams.get("guest_id");
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -69,9 +75,26 @@ export function RegisterForm() {
     setError(null);
 
     try {
-      await register({ email: data.email, password: data.password });
-      trackEvent("signup_completed");
-      router.push("/onboarding");
+      if (isGuestClaim && guestId) {
+        // Claim guest account — migrate data to real account
+        const res = await api.post<{
+          access_token: string;
+          refresh_token: string;
+          message: string;
+        }>("/auth/claim-guest", {
+          guest_id: guestId,
+          email: data.email,
+          password: data.password,
+        });
+        api.setTokens(res.access_token, res.refresh_token);
+        await fetchUser();
+        trackEvent("guest_claimed");
+        router.push("/dashboard?claimed=true");
+      } else {
+        await register({ email: data.email, password: data.password });
+        trackEvent("signup_completed");
+        router.push("/onboarding");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
@@ -83,10 +106,12 @@ export function RegisterForm() {
     <Card className="w-full max-w-lg border-gray-700 bg-[#111827] text-white shadow-xl">
       <CardHeader className="space-y-2 px-10 pt-10 pb-6">
         <CardTitle className="text-2xl font-bold text-white">
-          Create your account
+          {isGuestClaim ? "Claim your account" : "Create your account"}
         </CardTitle>
         <p className="text-base text-gray-400">
-          Enter your email and create a password to get started for free
+          {isGuestClaim
+            ? "Your predictions, trades, and Calibration Score will be saved"
+            : "Enter your email and create a password to get started for free"}
         </p>
       </CardHeader>
       <Form {...form}>

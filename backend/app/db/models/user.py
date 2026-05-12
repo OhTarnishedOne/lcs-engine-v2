@@ -29,6 +29,15 @@ class User(Base):
         String(100), unique=True, nullable=True, index=True
     )
 
+    # Guest/demo sessions
+    is_guest: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    guest_created_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    guest_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     # Relationship to profile (basic profile from Phase 1)
     profile: Mapped["Profile"] = relationship(
         "Profile", back_populates="user", uselist=False, cascade="all, delete-orphan"

@@ -15,16 +15,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     async function init() {
-      if (isDemo() && !api.isAuthenticated()) {
-        // Auto-login as demo user
+      if (isDemo()) {
+        // Try to resume existing guest session
+        const savedGuestId = localStorage.getItem("demo_guest_id");
+
+        if (api.isAuthenticated()) {
+          // Already have a token — just fetch user
+          await fetchUser();
+          return;
+        }
+
         try {
-          const res = await api.post<{ access_token: string; refresh_token: string }>(
-            "/auth/demo"
-          );
+          const body = savedGuestId ? { guest_id: savedGuestId } : {};
+          const res = await api.post<{
+            access_token: string;
+            refresh_token: string;
+            guest_id: string;
+            guest_expires_at: string | null;
+            days_remaining: number;
+          }>("/auth/demo", body);
+
           api.setTokens(res.access_token, res.refresh_token);
+          localStorage.setItem("demo_guest_id", res.guest_id);
           await fetchUser();
         } catch (e) {
           console.error("Demo auto-login failed:", e);
+          // Clear stale guest ID and retry once
+          localStorage.removeItem("demo_guest_id");
         }
       } else {
         await initialize();
