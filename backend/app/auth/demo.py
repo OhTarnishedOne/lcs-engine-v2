@@ -275,22 +275,26 @@ def _seed_predictions(db: Session, user_id: str):
     # Calibration Score. They're resolved, have known outcomes.
     demo_markets = [
         {"title": "CPI YoY above 3.0% — Feb 2026", "category": "cpi", "resolution": "yes"},
+        {"title": "CPI YoY above 3.0% — Jan 2026", "category": "cpi", "resolution": "yes"},
+        {"title": "CPI YoY above 3.0% — Dec 2025", "category": "cpi", "resolution": "no"},
         {"title": "Fed funds rate below 4.5% — Feb 2026", "category": "fed-funds-rate", "resolution": "yes"},
+        {"title": "Fed funds rate below 4.5% — Jan 2026", "category": "fed-funds-rate", "resolution": "no"},
+        {"title": "Fed funds rate below 4.5% — Dec 2025", "category": "fed-funds-rate", "resolution": "no"},
         {"title": "Unemployment below 4.5% — Feb 2026", "category": "unemployment", "resolution": "yes"},
-        {"title": "10-yr Treasury yield above 4.0% — Feb 2026", "category": "treasury-yields", "resolution": "yes"},
-        {"title": "Core PCE below 2.5% — Feb 2026", "category": "inflation", "resolution": "no"},
         {"title": "GDP growth above 2.0% — Q4 2025", "category": "gdp", "resolution": "yes"},
     ]
 
     # Predictions with varying quality — produces a realistic Calibration Score
     # (prob, brier_score) — brier = (prob - outcome)^2
     resolved_predictions = [
-        (0.75, 0.0625),   # Good call on CPI (outcome=1, brier=(0.75-1)^2)
-        (0.80, 0.0400),   # Strong call on Fed (outcome=1)
-        (0.70, 0.0900),   # Decent on unemployment (outcome=1)
-        (0.55, 0.2025),   # Mediocre on treasuries (outcome=1)
-        (0.60, 0.3600),   # Wrong direction on PCE (outcome=0, brier=(0.60-0)^2)
-        (0.65, 0.1225),   # Good on GDP (outcome=1)
+        (0.75, 0.0625),   # CPI Feb: good call (outcome=1)
+        (0.80, 0.0400),   # CPI Jan: strong call (outcome=1)
+        (0.30, 0.0900),   # CPI Dec: good call it wouldn't (outcome=0)
+        (0.85, 0.0225),   # Fed Feb: strong (outcome=1)
+        (0.60, 0.3600),   # Fed Jan: wrong direction (outcome=0)
+        (0.35, 0.1225),   # Fed Dec: decent (outcome=0)
+        (0.70, 0.0900),   # Unemployment: decent (outcome=1)
+        (0.65, 0.1225),   # GDP: good (outcome=1)
     ]
 
     created_market_ids = []
@@ -358,9 +362,15 @@ def _seed_predictions(db: Session, user_id: str):
     # Detect biases from the prediction set
     biases = []
     probs = [p for p, _ in resolved_predictions]
-    # Check for extreme aversion
+    # Check for extreme aversion (never predicts below 15% or above 85%)
     if not any(p < 0.15 for p in probs) and not any(p > 0.85 for p in probs):
         biases.append("extreme_aversion")
+    # Check for overconfidence (high-confidence predictions that were wrong)
+    extreme_preds = [(p, b) for p, b in resolved_predictions if p > 0.8 or p < 0.2]
+    if len(extreme_preds) >= 2:
+        high_brier = [b for _, b in extreme_preds if b > 0.15]
+        if len(high_brier) > 0:
+            biases.append("overconfidence")
 
     cal = CalibrationScore(
         user_id=user_id,
