@@ -43,7 +43,10 @@ async def get_portfolio(
 ) -> PortfolioResponse:
     """Get full portfolio with account balance and positions."""
     try:
-        portfolio = await service.get_portfolio(current_user.id)
+        if current_user.is_guest:
+            portfolio = await service.get_guest_portfolio(current_user.id)
+        else:
+            portfolio = await service.get_portfolio(current_user.id)
         return PortfolioResponse(
             equity=portfolio["equity"],
             cash=portfolio["cash"],
@@ -65,7 +68,10 @@ async def get_positions(
 ) -> list[PositionResponse]:
     """Get current open positions."""
     try:
-        positions = await service.get_positions()
+        if current_user.is_guest:
+            positions = await service.get_guest_positions(current_user.id)
+        else:
+            positions = await service.get_positions()
         return [PositionResponse(**p) for p in positions]
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
@@ -108,16 +114,26 @@ async def place_order(
         )
 
     try:
-        trade = await service.place_order(
-            user_id=current_user.id,
-            symbol=request.symbol,
-            qty=request.qty,
-            side=request.side,
-            order_type=request.order_type,
-            limit_price=request.limit_price,
-            strategy_id=request.strategy_id,
-            reasoning=request.reasoning,
-        )
+        if current_user.is_guest:
+            trade = await service.place_guest_order(
+                user_id=current_user.id,
+                symbol=request.symbol,
+                qty=request.qty,
+                side=request.side,
+                order_type=request.order_type,
+                limit_price=request.limit_price,
+            )
+        else:
+            trade = await service.place_order(
+                user_id=current_user.id,
+                symbol=request.symbol,
+                qty=request.qty,
+                side=request.side,
+                order_type=request.order_type,
+                limit_price=request.limit_price,
+                strategy_id=request.strategy_id,
+                reasoning=request.reasoning,
+            )
         return OrderResponse(
             id=trade.id,
             alpaca_order_id=trade.alpaca_order_id,
@@ -151,6 +167,15 @@ async def get_orders(
 ) -> list[dict]:
     """List orders. Status: open, closed, all."""
     try:
+        if current_user.is_guest:
+            # Guests have no Alpaca orders — return trade log as order history
+            trades = service.get_trade_history(current_user.id)
+            return [
+                {"id": t.id, "symbol": t.symbol, "side": t.side, "qty": t.qty,
+                 "order_type": t.order_type, "status": t.status, "filled_price": t.filled_price,
+                 "created_at": t.created_at.isoformat() if t.created_at else None}
+                for t in trades
+            ]
         return await service.get_orders(status)
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
