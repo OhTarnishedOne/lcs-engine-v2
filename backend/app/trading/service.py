@@ -189,7 +189,7 @@ class TradingService:
                 "current_price": current_price,
                 "market_value": round(market_value, 2),
                 "unrealized_pl": round(unrealized_pl, 2),
-                "unrealized_plpc": round((unrealized_pl / (avg_cost * shares)) * 100, 2) if avg_cost * shares > 0 else 0,
+                "unrealized_pl_pct": round((unrealized_pl / (avg_cost * shares)) * 100, 2) if avg_cost * shares > 0 else 0,
             })
             total_value += market_value
 
