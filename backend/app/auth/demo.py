@@ -305,6 +305,7 @@ def _seed_predictions(db: Session, user_id: str):
             close_date=now - timedelta(days=30),
             is_resolved=True,
             resolution=mkt_data["resolution"],
+            market_probability=0.50,
             description=f"Demo market for guest calibration ({mkt_data['category']})",
         )
         db.add(market)

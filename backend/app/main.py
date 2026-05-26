@@ -27,30 +27,20 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Startup and shutdown events."""
-    # Startup: seed prediction markets
+    """Startup and shutdown events.
+
+    IMPORTANT: Startup must be fast and never block on external APIs.
+    FRED backfill and resolution run in the background loop instead.
+    """
+    # Startup: seed prediction markets (local DB only — fast)
     db = SessionLocal()
     try:
         service = ProbabilityService(db)
         service.seed_markets_if_empty()
-
-        # Backfill resolution_metadata onto existing seed markets
-        if settings.fred_api_key:
-            from .integrations.fred import FredClient
-            from .probability.resolution import MarketAutomation
-
-            fred = FredClient(api_key=settings.fred_api_key)
-            try:
-                automation = MarketAutomation(db, fred, service)
-                updated = await automation.backfill_seed_markets()
-                if updated:
-                    logger.info(f"Backfilled {updated} seed markets with resolution metadata")
-            finally:
-                await fred.close()
     finally:
         db.close()
 
-    # Start background market automation (if FRED key configured)
+    # Start background market automation (handles backfill + resolution + cleanup)
     task = None
     if settings.fred_api_key:
         task = asyncio.create_task(market_automation_loop())

@@ -36,6 +36,11 @@ async def market_automation_loop():
             fred = FredClient(api_key=settings.fred_api_key)
             automation = MarketAutomation(db, fred)
 
+            # 0. Backfill resolution metadata on seed markets (idempotent)
+            backfilled = await automation.backfill_seed_markets()
+            if backfilled:
+                logger.info(f"Backfilled {backfilled} seed markets with resolution metadata")
+
             # 1. Resolve any markets with available data
             result = await automation.check_and_resolve()
             if result["resolved"]:

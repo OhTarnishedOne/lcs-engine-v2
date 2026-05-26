@@ -464,7 +464,7 @@ class ProbabilityService:
                 "market_id": pred.market_id,
                 "market_title": market.title,
                 "predicted_probability": pred.predicted_probability,
-                "market_probability": market.market_probability,
+                "market_probability": market.market_probability or 0.5,
                 "reasoning": pred.reasoning,
                 "brier_score": pred.brier_score,
                 "is_resolved": market.is_resolved,

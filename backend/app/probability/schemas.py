@@ -47,7 +47,7 @@ class PredictionResponse(BaseModel):
     market_id: str
     market_title: str
     predicted_probability: float
-    market_probability: float  # Revealed after submission
+    market_probability: Optional[float] = None  # Revealed after submission
     reasoning: Optional[str] = None
     brier_score: Optional[float] = None
     is_resolved: bool = False

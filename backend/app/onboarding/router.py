@@ -426,6 +426,11 @@ async def onboarding_chat(
         if m.get("role") in ("user", "assistant") and m.get("content")
     ]
 
+    # First-call edge case: frontend sends [] to get the AI's opening question.
+    # Anthropic requires at least one message.
+    if not ai_messages:
+        ai_messages = [{"role": "user", "content": "Hi, I just completed the quick questions. What should we talk about?"}]
+
     async def event_stream():
         try:
             yield f"data: {json.dumps({'type': 'start'})}\n\n"
