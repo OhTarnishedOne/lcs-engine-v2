@@ -23,9 +23,22 @@ interface ChatMessage {
 
 type Phase = "tap" | "chat" | "extracting" | "fallback";
 
+function checkRetakeIntent(): boolean {
+  if (typeof window === "undefined") return false;
+  // Check both sessionStorage (durable) and URL param (initial signal)
+  if (sessionStorage.getItem("onboarding_retake") === "true") return true;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("retake") === "true") {
+    sessionStorage.setItem("onboarding_retake", "true");
+    return true;
+  }
+  return false;
+}
+
 export default function OnboardingPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [isRetake] = useState(checkRetakeIntent);
 
   const [phase, setPhase] = useState<Phase>("tap");
   const [tapResponses, setTapResponses] = useState<Record<string, string | string[]>>({});
@@ -49,23 +62,24 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     if (!progressData) return;
-    if (progressData.is_complete) {
+    if (progressData.is_complete && !isRetake) {
       router.replace("/dashboard");
       return;
     }
 
-    // Resume from saved tap responses
+    // On retake, start fresh (don't resume partial tap state)
+    if (isRetake) return;
+
+    // Resume from saved tap responses (first-run only)
     const saved = progressData.tap_responses;
     if (saved && Object.keys(saved).length > 0) {
       const allTapsDone = TAP_SCREEN_KEYS.every((k) => k in saved);
       if (allTapsDone) {
-        // All tap screens done — skip to chat phase
         setTapResponses(saved);
         setPhase("chat");
       }
-      // If partial, TapScreens will handle resuming via initialResponses prop
     }
-  }, [progressData, router]);
+  }, [progressData, router, isRetake]);
 
   useEffect(() => {
     if (!onboardingTrackedRef.current) {
@@ -214,6 +228,7 @@ export default function OnboardingPage() {
 
       if (result.ok) {
         trackEvent("onboarding_completed", { method: "hybrid" });
+        sessionStorage.removeItem("onboarding_retake"); // Clear retake intent
         queryClient.invalidateQueries({ queryKey: ["onboarding-progress"] });
         queryClient.invalidateQueries({ queryKey: ["profile"] });
         router.replace("/profile?welcome=true");
@@ -286,6 +301,7 @@ export default function OnboardingPage() {
       }));
       await api.completeOnboardingConversation(tapResponses, transcript);
       trackEvent("onboarding_skipped", { phase: "chat" });
+      sessionStorage.removeItem("onboarding_retake");
       queryClient.invalidateQueries({ queryKey: ["onboarding-progress"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       router.replace("/dashboard");

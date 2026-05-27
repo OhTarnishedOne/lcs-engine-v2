@@ -21,6 +21,7 @@ import { trackEvent } from "@/lib/analytics";
 import type { Strategy } from "@/lib/api/types";
 import { useSessionStatus } from "@/hooks/useSessionStatus";
 import { UpgradeBanner } from "@/components/UpgradeBanner";
+import { DISCLAIMER_SHORT } from "@/components/Disclaimer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -489,6 +490,7 @@ export default function ChatPage() {
                 )}
               </Button>
             </form>
+            <p className="mt-2 text-xs text-gray-500 leading-relaxed px-1">{DISCLAIMER_SHORT}</p>
           </div>
         )}
       </div>

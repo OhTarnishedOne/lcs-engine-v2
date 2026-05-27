@@ -14,6 +14,7 @@ import {
   Scale,
   Lightbulb,
 } from "lucide-react";
+import { DISCLAIMER_FOOTER } from "@/components/Disclaimer";
 import { Button } from "@/components/ui/button";
 
 const highlights = [
@@ -329,6 +330,9 @@ export default function HomePage() {
               &amp; Polygon
             </span>
           </div>
+          <p className="mt-4 text-center text-xs text-gray-600 max-w-2xl mx-auto">
+            {DISCLAIMER_FOOTER}
+          </p>
         </motion.div>
       </div>
     </div>

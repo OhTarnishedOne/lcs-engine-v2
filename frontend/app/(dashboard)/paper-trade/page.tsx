@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatCard, SkeletonCard, EmptyState } from "@/components/shared";
 import { ProGate } from "@/components/ProGate";
+import { DISCLAIMER_SHORT } from "@/components/Disclaimer";
 
 
 export default function PaperTradePage() {
@@ -574,6 +575,10 @@ export default function PaperTradePage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <p className="mt-8 text-xs text-gray-500 leading-relaxed">
+        {DISCLAIMER_SHORT} Simulated results do not reflect actual trading. Past and simulated performance does not guarantee future results.
+      </p>
     </div>
     </ProGate>
   );

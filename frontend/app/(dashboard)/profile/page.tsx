@@ -446,7 +446,10 @@ export default function ProfilePage() {
           Want to update your preferences? You can retake onboarding anytime.
         </p>
         <Button
-          onClick={() => (window.location.href = "/onboarding")}
+          onClick={() => {
+            sessionStorage.setItem("onboarding_retake", "true");
+            window.location.href = "/onboarding?retake=true";
+          }}
           variant="outline"
           className="mt-3 border-gray-700 text-gray-300 hover:bg-[#1A2942] hover:text-white"
         >

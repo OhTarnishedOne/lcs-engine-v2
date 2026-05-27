@@ -9,6 +9,7 @@ import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUpgrade } from "@/hooks/useUpgrade";
 import { useBillingStatus } from "@/hooks/useBillingStatus";
+import { DISCLAIMER_FOOTER } from "@/components/Disclaimer";
 import { useAuthStore } from "@/stores/auth-store";
 import { useRouter } from "next/navigation";
 
@@ -16,13 +17,11 @@ const FREE_FEATURES = [
   "Investor archetype + profile",
   "3 AI tutor sessions",
   "3 Probability Lab predictions",
-  "Basic curriculum access",
 ];
 
 const PRO_FEATURES = [
   "Everything in Free",
   "Unlimited AI tutor sessions",
-  "Full curriculum (all modules)",
   "Unlimited Probability Lab predictions",
   "Paper trading \u2014 $100K virtual account",
   "AI-generated investment strategies",
@@ -161,6 +160,9 @@ export default function PricingPage() {
           >
             Contact us about Institution pricing.
           </a>
+        </p>
+        <p className="mt-6 text-center text-xs text-gray-600 max-w-2xl mx-auto">
+          {DISCLAIMER_FOOTER}
         </p>
       </div>
     </div>

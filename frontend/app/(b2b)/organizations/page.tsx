@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { DISCLAIMER_FOOTER } from "@/components/Disclaimer";
 import {
   Building2,
   Users,
@@ -73,13 +74,13 @@ const features = [
   { icon: BookOpen, title: "Personalized AI Tutor", description: "Claude-powered AI that adapts explanations to each learner's archetype — from Conservative Saver to Aggressive Investor." },
   { icon: BarChart3, title: "Probability Lab", description: "Real-world market scenarios using live Kalshi and Metaculus data. Builds probabilistic thinking, not just vocabulary." },
   { icon: TrendingUp, title: "Paper Trading Simulator", description: "Risk-free investing practice via Alpaca and Polygon. Members build muscle memory before real money is on the line." },
-  { icon: Users, title: "Investor Archetype Engine", description: "Proprietary onboarding that maps each user to one of five investor profiles, then personalizes every module accordingly." },
+  { icon: Users, title: "Investor Archetype Engine", description: "Proprietary onboarding that maps each user to one of five investor profiles, then personalizes AI tutor guidance and generated strategies accordingly." },
   { icon: Shield, title: "White-Label Ready", description: "Deploy under your brand. Custom domain, your logo, your colors. Your members never leave your ecosystem." },
-  { icon: BarChart3, title: "Progress Analytics", description: "Admin dashboards track cohort engagement, module completion, and literacy milestones — reportable to leadership." },
+  { icon: BarChart3, title: "Progress Analytics", description: "Admin dashboards track cohort engagement, prediction activity, and calibration progress — reportable to leadership." },
 ];
 
 const faqs = [
-  { q: "How is LCS Engine different from generic financial literacy tools?", a: "Most tools deliver static content. LCS Engine uses a proprietary archetype engine to profile each learner first, then adapts every lesson, example, and AI response to their specific investor psychology. It's the difference between a pamphlet and a coach." },
+  { q: "How is LCS Engine different from generic financial literacy tools?", a: "Most tools deliver static content. LCS Engine uses a proprietary archetype engine to profile each learner first, then adapts every explanation, example, and AI response to their specific investor psychology. It's the difference between a pamphlet and a coach." },
   { q: "How does the white-label licensing work?", a: "We license the platform under a B2B2C model. You get a branded instance on your domain, admin access to your cohort's analytics, and a dedicated onboarding. Pricing is per-seat annually with volume tiers." },
   { q: "What does integration look like technically?", a: "LCS Engine is a fully hosted web application. No engineering required on your end. For deeper integrations (SSO, LMS embedding, API access), we scope that in the pilot agreement." },
   { q: "Is there a minimum cohort size for a pilot?", a: "No minimum. We design pilots to fit your context — from 25-student HBCU cohorts to 5,000-member credit union rollouts. We'd rather start right than start big." },
@@ -335,6 +336,11 @@ export default function OrganizationsPage() {
           <div className="text-xs text-[#6B7280]">
             © {new Date().getFullYear()} LCS Engine. Built in NYC.
           </div>
+        </div>
+        <div className="border-t border-[#374151] px-6 py-4">
+          <p className="mx-auto max-w-3xl text-center text-xs text-[#6B7280]">
+            {DISCLAIMER_FOOTER}
+          </p>
         </div>
       </footer>
     </div>

@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SkeletonCard, RiskMeter, EmptyState } from "@/components/shared";
 import { UpgradeBanner } from "@/components/UpgradeBanner";
+import { DisclaimerInline } from "@/components/Disclaimer";
 import { useBillingStatus } from "@/hooks/useBillingStatus";
 import type { Strategy } from "@/lib/api/types";
 
@@ -379,6 +380,8 @@ export default function StrategiesPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <DisclaimerInline className="mt-8" />
     </div>
   );
 }
