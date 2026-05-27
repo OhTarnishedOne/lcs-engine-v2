@@ -62,6 +62,9 @@ export default function PrivacyPolicyPage() {
               <li><strong className="text-[#F9FAFB] font-medium">Anthropic (Claude API):</strong> Powers our AI tutor.</li>
               <li><strong className="text-[#F9FAFB] font-medium">Alpaca Markets:</strong> Powers the paper trading simulator.</li>
               <li><strong className="text-[#F9FAFB] font-medium">Resend:</strong> Handles transactional email delivery.</li>
+              <li><strong className="text-[#F9FAFB] font-medium">Stripe:</strong> Processes subscription payments. When you upgrade to Pro, you are redirected to Stripe&apos;s hosted checkout page to enter payment details — card information is collected and stored entirely by Stripe and never reaches LCS Engine servers. We share your email address with Stripe to pre-fill the checkout form and to associate the payment with your LCS Engine account. We store only a Stripe customer identifier on our side to manage your subscription status. Stripe&apos;s privacy policy and PCI DSS compliance govern their handling of your payment data.</li>
+              <li><strong className="text-[#F9FAFB] font-medium">PostHog:</strong> Analyzes aggregate usage and product engagement to help us improve the service.</li>
+              <li><strong className="text-[#F9FAFB] font-medium">Polygon:</strong> Provides market data for our paper trading and prediction features; does not receive personal user data.</li>
               <li><strong className="text-[#F9FAFB] font-medium">Railway / Vercel:</strong> Cloud infrastructure hosting.</li>
             </ul>
           </Section>
