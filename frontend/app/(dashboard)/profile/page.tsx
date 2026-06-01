@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -13,11 +13,13 @@ import {
   TrendingUp,
   ChevronRight,
   Heart,
+  AlertTriangle,
 } from "lucide-react";
 
 import { api } from "@/lib/api/client";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useBillingStatus } from "@/hooks/useBillingStatus";
 import { useManageSubscription } from "@/hooks/useManageSubscription";
@@ -456,6 +458,115 @@ export default function ProfilePage() {
           Retake Onboarding
         </Button>
       </motion.div>
+
+      {/* Delete Account */}
+      <DeleteAccountSection />
     </div>
+  );
+}
+
+function DeleteAccountSection() {
+  const router = useRouter();
+  const { logout } = useAuthStore();
+  const [showModal, setShowModal] = useState(false);
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!password) {
+      setError("Password is required");
+      return;
+    }
+    setIsDeleting(true);
+    setError(null);
+    try {
+      await api.deleteAccount(password);
+      logout();
+      window.location.href = "/?deleted=true";
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete account");
+      setIsDeleting(false);
+    }
+  };
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+      >
+        <Card className="border-red-500/20 bg-[#111827] p-6">
+          <CardHeader className="p-0 pb-4">
+            <CardTitle className="flex items-center gap-2 text-red-400">
+              <AlertTriangle className="h-5 w-5" />
+              Delete account
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <p className="text-sm text-gray-400 mb-4">
+              This permanently deletes your account and all associated data — your profile,
+              generated strategies, predictions, paper trading history, AI chat history, and
+              calibration scores. If you have an active Pro subscription, it will be cancelled.
+              This cannot be undone.
+            </p>
+            <Button
+              onClick={() => setShowModal(true)}
+              variant="outline"
+              className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-400"
+            >
+              Delete my account
+            </Button>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Confirmation modal */}
+      {showModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => { setShowModal(false); setPassword(""); setError(null); }}
+        >
+          <div
+            className="w-full max-w-md rounded-xl border border-red-500/30 bg-[#111827] p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-red-400 mb-2">Confirm account deletion</h3>
+            <p className="text-sm text-gray-400 mb-4">
+              Enter your password to permanently delete your account. All data will be erased immediately.
+            </p>
+            {error && (
+              <div className="mb-4 rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-400">
+                {error}
+              </div>
+            )}
+            <Input
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="mb-4 border-gray-700 bg-[#1A2942] text-white placeholder:text-gray-500"
+            />
+            <div className="flex gap-3">
+              <Button
+                onClick={() => { setShowModal(false); setPassword(""); setError(null); }}
+                variant="outline"
+                className="flex-1 border-gray-700 text-gray-300 hover:bg-[#1A2942]"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDelete}
+                disabled={!password || isDeleting}
+                className="flex-1 bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {isDeleting ? "Deleting..." : "Permanently delete"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

@@ -49,7 +49,7 @@ class Strategy(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     # Relationships
-    user = relationship("User", backref="strategies")
+    user = relationship("User", backref="strategies", passive_deletes=True)
 
 
 class StrategyComparison(Base):
@@ -69,4 +69,4 @@ class StrategyComparison(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     # Relationships
-    user = relationship("User", backref="strategy_comparisons")
+    user = relationship("User", backref="strategy_comparisons", passive_deletes=True)

@@ -231,6 +231,13 @@ class ApiClient {
     return this.post("/auth/reset-password", { token, password });
   }
 
+  async deleteAccount(password: string): Promise<void> {
+    await this.fetch("/auth/me", {
+      method: "DELETE",
+      body: JSON.stringify({ password }),
+    });
+  }
+
   // ============================================
   // Onboarding API
   // ============================================

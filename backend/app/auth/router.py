@@ -99,6 +99,60 @@ def get_me(current_user: User = Depends(get_current_user)) -> UserResponse:
     )
 
 
+@router.delete("/me", status_code=204)
+def delete_me(
+    data: dict,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Permanently delete the authenticated user's account and all associated data.
+    Requires password confirmation. Cancels any active Stripe subscription.
+    """
+    password = data.get("password")
+    if not password:
+        raise HTTPException(status_code=400, detail="Password is required")
+
+    if not verify_password(password, current_user.password_hash):
+        raise UnauthorizedError("Invalid password")
+
+    user_id = current_user.id
+
+    # Cancel Stripe subscription if present
+    if current_user.stripe_customer_id:
+        try:
+            import stripe
+            from ..settings import get_settings
+            s = get_settings()
+            stripe.api_key = s.stripe_secret_key
+            # List active subscriptions and cancel each
+            subs = stripe.Subscription.list(customer=current_user.stripe_customer_id, status="active")
+            for sub in subs.auto_paging_iter():
+                stripe.Subscription.cancel(sub.id)
+                logger.info(f"Cancelled Stripe subscription {sub.id} for user {user_id}")
+        except Exception as e:
+            # Log but don't block deletion — user's intent is to leave
+            logger.warning(f"Failed to cancel Stripe subscription for user {user_id}: {e}")
+
+    # Explicitly delete Strategy/StrategyComparison (their backref relationship
+    # causes SQLAlchemy to try nulling user_id before CASCADE fires in SQLite).
+    # In Postgres, DB-level CASCADE handles this, but explicit delete is safer.
+    from ..db.models import Strategy, StrategyComparison
+    db.query(Strategy).filter(Strategy.user_id == user_id).delete()
+    db.query(StrategyComparison).filter(StrategyComparison.user_id == user_id).delete()
+
+    # Hard delete user — DB CASCADE handles remaining child records
+    db.delete(current_user)
+    db.commit()
+
+    logger.info(f"user_deleted user_id={user_id}")
+
+    from fastapi.responses import Response
+    response = Response(status_code=204)
+    response.delete_cookie("access_token", path="/")
+    return response
+
+
 @router.get("/me/calibration")
 def get_me_calibration(
     current_user: User = Depends(get_current_user),

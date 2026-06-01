@@ -8,6 +8,18 @@ import pytest
 from datetime import datetime, timedelta
 
 from app.probability.service import ProbabilityService, SEED_MARKETS
+from app.db.models import User
+from app.auth.utils import hash_password
+
+
+def _ensure_test_user(db, user_id, email=None):
+    """Create a user with a specific ID if it doesn't exist."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        user = User(id=user_id, email=email or f"{user_id}@test.com", password_hash=hash_password("test"))
+        db.add(user)
+        db.commit()
+    return user
 
 
 def get_token(client):
@@ -223,6 +235,8 @@ def test_bias_detection_overconfidence(db):
     # Create resolved markets and predictions with overconfidence pattern
     markets = db.query(PredictionMarket).limit(5).all()
 
+    _ensure_test_user(db, "test-user")
+
     # Simulate resolved predictions with overconfidence
     all_preds = []
     resolved_preds = []
@@ -255,6 +269,8 @@ def test_bias_detection_extreme_aversion(db):
     from app.db.models import PredictionMarket, UserPrediction
 
     markets = db.query(PredictionMarket).limit(6).all()
+
+    _ensure_test_user(db, "test-user-2")
 
     # Create predictions that cluster in the middle (40-60%)
     all_preds = []
@@ -329,6 +345,8 @@ async def test_resolve_market(db):
     from app.db.models import PredictionMarket, UserPrediction
 
     market = db.query(PredictionMarket).first()
+
+    _ensure_test_user(db, "test-resolver")
 
     # Create a prediction
     pred = UserPrediction(
