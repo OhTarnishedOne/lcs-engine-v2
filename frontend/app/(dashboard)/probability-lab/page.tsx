@@ -30,6 +30,7 @@ import { SkeletonCard, EmptyState } from "@/components/shared";
 import { ProGate } from "@/components/ProGate";
 import { MacroStrategyCard } from "@/components/MacroStrategyCard";
 import { UpgradeBanner } from "@/components/UpgradeBanner";
+import { CalibrationEngineLoop } from "@/components/CalibrationEngineLoop";
 import { useBillingStatus } from "@/hooks/useBillingStatus";
 import { useCalibrationScore } from "@/hooks/useCalibrationScore";
 import { InfoTip } from "@/components/InfoTip";
@@ -67,7 +68,18 @@ const BIASES_TOOLTIP = "Patterns in your prediction history that suggest systema
 
 export default function ProbabilityLabPage() {
   const { isPro } = useBillingStatus();
-  const { score: calibrationScore, percentile, subScores, trend, resolvedCount, predictionCount, isFirstScoreView } = useCalibrationScore();
+  const {
+    score: calibrationScore,
+    percentile,
+    subScores,
+    trend,
+    resolvedCount,
+    predictionCount,
+    isFirstScoreView,
+    nextAction,
+    engineInsights,
+    recentReviews,
+  } = useCalibrationScore();
   const isDemo = typeof window !== "undefined" && window.location.hostname.includes("demo.");
   const queryClient = useQueryClient();
   const [selectedMarket, setSelectedMarket] = useState<PredictionMarket | null>(null);
@@ -105,6 +117,7 @@ export default function ProbabilityLabPage() {
       trackEvent("prediction_submitted");
       queryClient.invalidateQueries({ queryKey: ["predictions"] });
       queryClient.invalidateQueries({ queryKey: ["calibration"] });
+      queryClient.invalidateQueries({ queryKey: ["calibration-score"] });
       queryClient.invalidateQueries({ queryKey: ["markets"] });
       setShowResult({
         predicted: result.predicted_probability * 100,
@@ -196,7 +209,7 @@ export default function ProbabilityLabPage() {
       >
         <h1 className="text-2xl font-bold text-white">Probability Lab</h1>
         <p className="mt-1 text-gray-400">
-          Test your forecasting skills on economic events
+          Train the judgment loop behind your Calibration Score
         </p>
       </motion.div>
 
@@ -315,6 +328,24 @@ export default function ProbabilityLabPage() {
             </div>
           </div>
         )}
+      </motion.div>
+
+      {/* Decision Intelligence Engine */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="mb-8"
+      >
+        <CalibrationEngineLoop
+          score={calibrationScore}
+          predictionCount={predictionCount}
+          resolvedCount={resolvedCount}
+          nextAction={nextAction}
+          insights={engineInsights}
+          recentReviews={recentReviews}
+          onShowMethodology={() => setShowMethodology(true)}
+        />
       </motion.div>
 
       {/* Markets Grid */}

@@ -71,6 +71,9 @@ class TestCalibrationScoreNullCases:
         result = compute_calibration_score(db, user.id)
         assert result["overall_score"] is None
         assert result["resolved_count"] == 4
+        assert result["engine_state"] == "building"
+        assert result["next_action"]["cta"] == "Predict a market"
+        assert result["engine_insights"][0]["type"] == "progress"
 
 
 class TestCalibrationScoreComputation:
@@ -96,6 +99,10 @@ class TestCalibrationScoreComputation:
 
         result = compute_calibration_score(db, user.id)
         assert result["overall_score"] == 50
+        assert result["engine_state"] == "active"
+        assert result["next_action"]["cta"] in {"Predict a market", "Make next prediction"}
+        assert len(result["recent_reviews"]) == 3
+        assert result["recent_reviews"][0]["verdict"] == "Mixed signal"
 
     def test_recency_weighting_recent_predictions_count_more(self, db):
         user = _create_user(db)

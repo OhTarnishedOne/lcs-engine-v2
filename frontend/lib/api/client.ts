@@ -519,6 +519,30 @@ class ApiClient {
     sub_scores: { category: string; score: number; prediction_count: number }[];
     trend_30d: { date: string; score: number }[];
     is_first_score_view: boolean;
+    engine_state: "building" | "active";
+    next_action: {
+      title: string;
+      description: string;
+      cta: string;
+      href: string;
+    };
+    engine_insights: {
+      type: string;
+      title: string;
+      description: string;
+      severity: "info" | "positive" | "warning";
+    }[];
+    recent_reviews: {
+      market_title: string;
+      category: string;
+      predicted_probability: number;
+      outcome: string;
+      brier_score: number;
+      decision_score: number;
+      verdict: string;
+      diagnosis: string;
+      created_at: string;
+    }[];
   }> {
     return this.get("/auth/me/calibration");
   }
