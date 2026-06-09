@@ -160,7 +160,6 @@ export default function ProbabilityLabPage() {
 
   // Calibration chart data
   const hasCalibrationData = (calibration?.calibration_curve ?? []).length > 0;
-  const chartResolvedCount = calibration?.resolved_predictions ?? 0;
 
   const calibrationData = [
     { predicted: 0, perfect: 0, actual: undefined as number | undefined },
