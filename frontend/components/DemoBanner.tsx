@@ -1,7 +1,9 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Shield } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
+
+const GUEST_TRIAL_DAYS = 5;
 
 export function DemoBanner() {
   if (typeof window === "undefined") return null;
@@ -13,14 +15,23 @@ export function DemoBanner() {
 function GuestBannerInner() {
   const { user } = useAuthStore();
 
+  const isAdmin = user?.is_admin ?? false;
   const isGuest = user?.is_guest ?? false;
   const daysRemaining = user?.days_remaining ?? null;
   const guestId = user?.id;
 
-  // Compute urgency
-  const isUrgent = daysRemaining !== null && daysRemaining !== undefined && daysRemaining <= 2;
-  const isExpired = daysRemaining !== null && daysRemaining !== undefined && daysRemaining <= 0;
+  // Admin users: show admin badge, never show trial banner
+  if (isAdmin) {
+    return (
+      <div className="sticky top-0 z-[60] flex items-center justify-center gap-2 bg-[#1A2942] border-b border-[#00D4AA]/20 px-4 py-1.5">
+        <Shield className="h-3 w-3 text-[#00D4AA]" />
+        <p className="text-xs text-[#00D4AA] font-medium">Admin View</p>
+      </div>
+    );
+  }
 
+  // Expired guest: conversion gate
+  const isExpired = daysRemaining !== null && daysRemaining !== undefined && daysRemaining <= 0;
   if (isExpired && isGuest) {
     return (
       <div className="sticky top-0 z-[60] flex flex-col items-center gap-2 bg-[#EF4444]/20 border-b border-[#EF4444]/30 px-4 py-3 sm:flex-row sm:justify-center sm:gap-4">
@@ -38,6 +49,8 @@ function GuestBannerInner() {
     );
   }
 
+  // Active trial: countdown banner
+  const isUrgent = daysRemaining !== null && daysRemaining !== undefined && daysRemaining <= 2;
   const dayLabel = daysRemaining !== null && daysRemaining !== undefined
     ? `Day ${GUEST_TRIAL_DAYS - daysRemaining + 1} of ${GUEST_TRIAL_DAYS}`
     : null;
@@ -62,5 +75,3 @@ function GuestBannerInner() {
     </div>
   );
 }
-
-const GUEST_TRIAL_DAYS = 5;

@@ -23,6 +23,7 @@ export interface User {
   id: string;
   email: string;
   created_at: string;
+  is_admin?: boolean;
   is_guest?: boolean;
   guest_expires_at?: string | null;
   days_remaining?: number | null;

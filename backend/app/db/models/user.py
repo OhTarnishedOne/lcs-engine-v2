@@ -23,6 +23,9 @@ class User(Base):
     )
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), onupdate=utc_now)
 
+    # Admin
+    is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
     # Billing
     tier: Mapped[str] = mapped_column(String(20), nullable=False, default="free")
     stripe_customer_id: Mapped[str | None] = mapped_column(

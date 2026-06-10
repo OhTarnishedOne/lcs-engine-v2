@@ -93,6 +93,7 @@ def get_me(current_user: User = Depends(get_current_user)) -> UserResponse:
         id=current_user.id,
         email=current_user.email,
         created_at=current_user.created_at.isoformat(),
+        is_admin=current_user.is_admin,
         is_guest=current_user.is_guest,
         guest_expires_at=current_user.guest_expires_at.isoformat() if current_user.guest_expires_at else None,
         days_remaining=days_remaining,

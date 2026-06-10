@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from ..deps import get_db
-from ..db.models import User, Profile, UserProfile, Conversation, Message
+from ..db.models import User, Profile, UserProfile, Conversation, Message, TradeLog
 from ..db.models.probability import PredictionMarket, UserPrediction, CalibrationScore
 from .utils import hash_password, create_access_token, create_refresh_token
 from .schemas import TokenResponse
@@ -120,6 +120,13 @@ def demo_login(
         db.commit()
     except Exception as e:
         logger.warning(f"Guest prediction seeding failed: {e}")
+        db.rollback()
+
+    try:
+        _seed_paper_trades(db, user.id)
+        db.commit()
+    except Exception as e:
+        logger.warning(f"Guest paper trade seeding failed: {e}")
         db.rollback()
 
     logger.info(f"Guest session created: {guest_email} (expires {user.guest_expires_at})")
@@ -382,3 +389,32 @@ def _seed_predictions(db: Session, user_id: str):
         detected_biases=biases,
     )
     db.add(cal)
+
+def _seed_paper_trades(db: Session, user_id: str):
+    """Seed paper trading positions for a realistic-looking portfolio.
+
+    Creates buy trades that result in a ~$102K portfolio (slight gain
+    on $100K starting capital). Balanced Builder archetype gets a mix
+    of ETFs and individual stocks.
+    """
+    now = datetime.now(UTC)
+
+    trades = [
+        {"symbol": "SPY", "qty": 40, "price": 502.18, "days_ago": 25},
+        {"symbol": "AAPL", "qty": 30, "price": 185.40, "days_ago": 20},
+        {"symbol": "VTI", "qty": 25, "price": 268.50, "days_ago": 15},
+        {"symbol": "MSFT", "qty": 10, "price": 410.20, "days_ago": 10},
+    ]
+
+    for t in trades:
+        trade = TradeLog(
+            user_id=user_id,
+            symbol=t["symbol"],
+            side="buy",
+            qty=t["qty"],
+            order_type="market",
+            filled_price=t["price"],
+            status="filled",
+            created_at=now - timedelta(days=t["days_ago"]),
+        )
+        db.add(trade)
