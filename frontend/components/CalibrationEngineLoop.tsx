@@ -67,6 +67,7 @@ export function CalibrationEngineLoop({
     {
       title: "Improve",
       description: "Use the next call to pressure-test the weak pattern.",
+      // Improve never completes — the loop is ongoing by design
       status: loopStatus(false, hasScore),
     },
   ];

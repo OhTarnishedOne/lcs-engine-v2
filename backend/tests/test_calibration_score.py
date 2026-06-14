@@ -11,6 +11,7 @@ from app.probability.calibration import (
     _recency_weight,
     _brier_to_score,
     _compute_weighted_score,
+    _build_decision_review,
 )
 from app.db.models import User, PredictionMarket, UserPrediction, CalibrationScoreHistory
 
@@ -89,6 +90,15 @@ class TestCalibrationScoreComputation:
         result = compute_calibration_score(db, user.id)
         assert result["overall_score"] == 100
 
+    def test_exactly_5_resolved_predictions_activates_engine(self, db):
+        user = _create_user(db)
+        for i in range(5):
+            market = _create_resolved_market(db, f"Boundary {i}", resolution="yes")
+            _create_prediction(db, user.id, market.id, 0.8, 0.04, days_ago=i + 1)
+
+        result = compute_calibration_score(db, user.id)
+        assert result["engine_state"] == "active"
+
     def test_uniform_50_50_predictions_on_resolved_events(self, db):
         """Predicting 50% on everything that resolves yes gives Brier=0.25 → score=50."""
         user = _create_user(db)
@@ -122,6 +132,32 @@ class TestCalibrationScoreComputation:
         # Score: 100 * (1 - 4 * 0.0795) ≈ 68
         assert result["overall_score"] is not None
         assert result["overall_score"] > 50  # Biased toward the better recent predictions
+
+    def test_high_conviction_miss_rate_adds_confidence_insight(self, db):
+        user = _create_user(db)
+        for i in range(5):
+            market = _create_resolved_market(db, f"Miss {i}", resolution="no")
+            _create_prediction(db, user.id, market.id, 0.8, 0.64, days_ago=i + 1)
+
+        result = compute_calibration_score(db, user.id)
+        assert any(
+            insight["type"] == "confidence"
+            and "high-conviction" in insight["title"].lower()
+            for insight in result["engine_insights"]
+        )
+
+    def test_50_50_clustering_adds_confidence_insight(self, db):
+        user = _create_user(db)
+        for i in range(5):
+            market = _create_resolved_market(db, f"Neutral {i}", resolution="yes")
+            _create_prediction(db, user.id, market.id, 0.5, 0.25, days_ago=i + 1)
+
+        result = compute_calibration_score(db, user.id)
+        assert any(
+            insight["type"] == "confidence"
+            and "50/50" in insight["title"]
+            for insight in result["engine_insights"]
+        )
 
 
 class TestSubScores:
@@ -243,6 +279,17 @@ class TestResolutionPipeline:
 
 class TestHelpers:
     """Unit tests for helper functions."""
+
+    def test_build_decision_review_handles_cancelled_resolution(self, db):
+        user = _create_user(db)
+        market = _create_resolved_market(db, "Cancelled market", resolution="cancelled")
+        prediction = _create_prediction(db, user.id, market.id, 0.7, 0.49)
+
+        review = _build_decision_review(prediction, market)
+
+        assert review["outcome"] == "cancelled"
+        assert isinstance(review["decision_score"], int)
+        assert 0 <= review["decision_score"] <= 100
 
     def test_recency_weight_recent(self):
         now = datetime.now(UTC)

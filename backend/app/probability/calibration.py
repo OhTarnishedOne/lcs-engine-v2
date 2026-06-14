@@ -67,6 +67,7 @@ def compute_calibration_score(
     if resolved_count < MIN_RESOLVED_PREDICTIONS:
         insights = _build_engine_insights(
             resolved=resolved,
+            reviews=recent_reviews,
             overall_score=None,
             sub_scores=[],
             trend=trend,
@@ -112,6 +113,7 @@ def compute_calibration_score(
     trend = _get_trend(db, user_id)
     insights = _build_engine_insights(
         resolved=resolved,
+        reviews=recent_reviews,
         overall_score=overall_score,
         sub_scores=sub_scores,
         trend=trend,
@@ -278,6 +280,7 @@ def _build_decision_review(
 
 def _build_engine_insights(
     resolved: list[tuple[UserPrediction, PredictionMarket]],
+    reviews: list[dict],
     overall_score: Optional[int],
     sub_scores: list[dict],
     trend: list[dict],
@@ -310,7 +313,6 @@ def _build_engine_insights(
             })
         return insights
 
-    reviews = [_build_decision_review(pred, market) for pred, market in resolved]
     breakdowns = [review for review in reviews if review["decision_score"] < 40]
     if breakdowns:
         worst = min(breakdowns, key=lambda review: review["decision_score"])
@@ -431,12 +433,9 @@ def _build_next_action(
         }
 
     return {
-        "title": "Write the reason before the number",
-        "description": (
-            "Your score is active. For the next call, capture the base rate and the evidence "
-            "that would change your mind."
-        ),
-        "cta": "Make next prediction",
+        "title": "Waiting on resolutions",
+        "description": "You have predictions pending. Check back after markets resolve to see your next score update.",
+        "cta": "View predictions",
         "href": "/probability-lab",
     }
 

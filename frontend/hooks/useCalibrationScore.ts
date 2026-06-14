@@ -13,7 +13,7 @@ export interface CalibrationData {
   trend_30d: { date: string; score: number }[];
   is_first_score_view: boolean;
   engine_state: "building" | "active";
-  next_action: CalibrationNextAction;
+  next_action: CalibrationNextAction | null;
   engine_insights: CalibrationEngineInsight[];
   recent_reviews: CalibrationRecentReview[];
 }
