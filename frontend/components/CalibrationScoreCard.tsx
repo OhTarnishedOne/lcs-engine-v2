@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Target, ArrowRight, TrendingUp } from "lucide-react";
+import { Target, ArrowRight } from "lucide-react";
 import { useCalibrationScore } from "@/hooks/useCalibrationScore";
 import { InfoTip } from "@/components/InfoTip";
 
-const SCORE_TOOLTIP = "A measure of how well your confidence matches reality \u2014 the skill that separates great investors from lucky ones.";
+const SCORE_TOOLTIP = "The feedback loop behind LCS Engine: make a decision, get scored, diagnose the pattern, then improve the next call.";
 
 function MiniSparkline({ data }: { data: { score: number }[] }) {
   if (data.length < 2) return null;
@@ -61,11 +61,11 @@ export function CalibrationScoreCard({ compact = false }: Props) {
               <Target className="h-5 w-5 text-[#00D4AA]" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-semibold text-white">Build your Calibration Score</p>
+              <p className="text-sm font-semibold text-white">Start the Decision Intelligence Engine</p>
               <p className="text-xs text-gray-400 mt-0.5">
                 {resolvedCount < 5
-                  ? `${5 - resolvedCount} more resolved predictions needed`
-                  : "Make predictions to start tracking"}
+                  ? `${5 - resolvedCount} more resolved predictions unlock scoring`
+                  : "Make predictions to start the feedback loop"}
               </p>
             </div>
             <ArrowRight className="h-4 w-4 text-[#00D4AA] transition-transform group-hover:translate-x-1" />
@@ -85,7 +85,7 @@ export function CalibrationScoreCard({ compact = false }: Props) {
                 <Target className="h-4 w-4 text-[#00D4AA]" />
               </div>
               <div>
-                <p className="text-xs text-gray-400">Calibration Score</p>
+                <p className="text-xs text-gray-400">Decision Engine</p>
                 <p className="text-xl font-bold font-mono-nums text-[#00D4AA]">{score}</p>
               </div>
             </div>
@@ -104,7 +104,7 @@ export function CalibrationScoreCard({ compact = false }: Props) {
             <InfoTip content={SCORE_TOOLTIP}>
               <div className="flex items-center gap-2 mb-1 cursor-help">
                 <Target className="h-5 w-5 text-[#00D4AA]" />
-                <p className="text-sm text-gray-400 border-b border-dashed border-gray-600">Calibration Score</p>
+                <p className="text-sm text-gray-400 border-b border-dashed border-gray-600">Decision Intelligence Engine</p>
               </div>
             </InfoTip>
             <p className="text-4xl font-bold font-mono-nums text-[#00D4AA]">{score}</p>
@@ -114,7 +114,7 @@ export function CalibrationScoreCard({ compact = false }: Props) {
               </p>
             )}
             <p className="mt-2 text-xs text-gray-500">
-              {resolvedCount} resolved · {predictionCount} total predictions
+              Calibration Score from {resolvedCount} resolved decisions · {predictionCount} total predictions
             </p>
           </div>
           <div className="flex flex-col items-end gap-2">
