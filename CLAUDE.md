@@ -100,3 +100,16 @@ Sequential numbering: `001_initial_user_profile.py` through `012_add_password_re
 - Backend: Python type hints, Pydantic schemas, SQLAlchemy mapped_column style
 - Frontend: TypeScript strict, functional components, TanStack Query for data fetching
 - Commit messages: imperative mood, explain "why" not "what"
+
+## Claude Code — Dev Environment
+
+- Backend runs in a virtualenv at `backend/venv`. Always invoke via `backend/venv/bin/python`, `backend/venv/bin/pytest`, `backend/venv/bin/uvicorn` etc. Never use system `python3` for backend work.
+- Before first run on a fresh checkout: `cd backend && ./venv/bin/alembic upgrade head`
+- Dev DB is `backend/lcs_dev.db` (SQLite, gitignored). Production uses PostgreSQL on Railway.
+- Backend starts on port 8000: `cd backend && ./venv/bin/uvicorn app.main:app --reload --port 8000`
+- Frontend starts on port 3000: `cd frontend && npm run dev`
+- Env files are gitignored. Backend boots without `backend/.env` (defaults to SQLite + placeholder JWT). Frontend defaults to `http://localhost:8000/api` without `frontend/.env.local`.
+- Missing API keys cause expected degradation: AI chat/tutor renders blank, strategy generation fails. Auth, onboarding, and Probability Lab work fully without keys.
+- Test caveats: 5 tests in `backend/tests/test_chat.py` fail pre-existing due to mock targeting `get_anthropic_client` while router depends on `get_ai_client`. Not an environment issue.
+- `npm run lint` reports pre-existing errors in repo source. Expected, not introduced by Claude Code sessions.
+- `demo/` is a separate static Next.js site (port 3001). Not installed by default — run `npm --prefix demo install` on demand.
