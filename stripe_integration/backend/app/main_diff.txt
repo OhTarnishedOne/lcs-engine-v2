@@ -1,0 +1,7 @@
+# Add to backend/app/main.py imports:
+# from .billing.router import router as billing_router
+
+# Add after the other router includes:
+# app.include_router(billing_router, prefix="/api")
+
+# That's the only change to main.py needed.

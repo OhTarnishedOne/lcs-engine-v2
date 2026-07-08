@@ -13,6 +13,7 @@ import {
   BarChart3,
   UserCircle,
   Lock,
+  Shield,
 } from "lucide-react";
 
 import { useQuery } from "@tanstack/react-query";
@@ -22,6 +23,7 @@ import { api } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useUIStore } from "@/stores/ui-store";
+import { useAuthStore } from "@/stores/auth-store";
 import { useBillingStatus } from "@/hooks/useBillingStatus";
 import { useCalibrationScore } from "@/hooks/useCalibrationScore";
 
@@ -38,6 +40,7 @@ const navigation = [
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { isPro } = useBillingStatus();
+  const { user } = useAuthStore();
 
   const { data: progress } = useQuery({
     queryKey: ["onboarding-progress"],
@@ -46,9 +49,14 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
 
   const isOnboardingComplete = progress?.is_complete ?? false;
 
-  const bottomNav = isOnboardingComplete
-    ? [{ name: "Profile", href: "/profile", icon: UserCircle }]
-    : [{ name: "Onboarding", href: "/onboarding", icon: GraduationCap }];
+  const bottomNav = [
+    ...(isOnboardingComplete
+      ? [{ name: "Profile", href: "/profile", icon: UserCircle }]
+      : [{ name: "Onboarding", href: "/onboarding", icon: GraduationCap }]),
+    ...(user?.is_admin
+      ? [{ name: "Admin", href: "/admin", icon: Shield }]
+      : []),
+  ];
 
   return (
     <nav className="flex flex-1 flex-col">

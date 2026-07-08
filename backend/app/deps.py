@@ -51,6 +51,14 @@ def get_current_user(
     return user
 
 
+def get_admin_user(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    if not current_user.is_admin:
+        raise UnauthorizedError("Admin access required")
+    return current_user
+
+
 def get_anthropic_client() -> AnthropicClient:
     """Get the Anthropic client for AI chat (legacy, use get_ai_client instead)."""
     return AnthropicClient()

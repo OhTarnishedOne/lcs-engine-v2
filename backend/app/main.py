@@ -19,6 +19,7 @@ from .probability.service import ProbabilityService
 from .probability.background import market_automation_loop
 from .billing.router import router as billing_router
 from .admin.router import router as admin_router
+from .admin.dashboard import router as admin_dashboard_router
 from .analytics.router import router as analytics_router
 
 logger = logging.getLogger(__name__)
@@ -85,6 +86,7 @@ app.include_router(trading_router, prefix="/api/trading")
 app.include_router(probability_router, prefix="/api/probability")
 app.include_router(billing_router, prefix="/api")
 app.include_router(admin_router, prefix="/api")
+app.include_router(admin_dashboard_router, prefix="/api")
 app.include_router(analytics_router, prefix="/api")
 
 
