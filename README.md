@@ -1,34 +1,46 @@
 # LCS Engine
 
-**AI-powered financial education that teaches people how to invest — without the fear.**
+**The decision intelligence platform that trains people to know how confident they should have been.**
 
-LCS Engine combines a personalized AI tutor, risk-free paper trading with real market data, economic forecasting exercises, and AI-generated investment strategies into a single cohesive learning experience.
+LCS Engine measures, trains, and improves financial decision-making under uncertainty. At its core is the **Calibration Score** (patent pending) — a metric that grades your *reasoning process*, not your outcomes. You are not being graded on whether you guessed right. You are being trained to know how confident you should have been.
 
----
+The platform runs an active **Decide → Score → Diagnose → Improve** loop: users make probabilistic forecasts on real economic events, get scored on calibration using Brier scoring, receive diagnosis of cognitive biases in their reasoning, and improve through a personalized AI tutor, risk-free paper trading, and AI-generated strategies.
 
 ## Features
 
-### AI Financial Tutor
-A conversational AI assistant powered by Anthropic Claude (with OpenAI fallback) that adapts its tone, complexity, and teaching style based on the user's profile. A "Cautious Beginner" gets patient, analogy-rich explanations. A "Time-Pressed" learner gets concise, actionable answers. The tutor is aware of saved strategies and portfolio context so it gives personalized advice, not generic responses.
-
-### Paper Trading
-Practice buying and selling stocks with $100k in simulated capital using real-time market data from Alpaca and Polygon.io. Place market or limit orders, track open positions with live P&L, and review trade history — all with zero financial risk.
-
-### AI-Generated Investment Strategies
-Generates personalized strategies (value, growth, income, momentum, balanced, index) based on risk tolerance, goals, and experience. Each strategy includes specific asset allocations with rationale, risk analysis, and educational learning points. Compare strategies side-by-side and ask the AI to explain any aspect.
+### Calibration Score & Gamification Engine *(patent pending)*
+The measurement layer. Every resolved prediction feeds a Brier scoring engine that rolls into a user-facing Calibration Score, score families (progression tiers based on demonstrated calibration), and a badge system that rewards well-calibrated reasoning — not bold guessing. Outcomes resolve against external market data feeds, so scores are grounded in reality, not self-report. Backed by 119 passing tests.
 
 ### Probability Lab
-Forecast real-world economic events (Fed rate decisions, CPI, GDP, unemployment) and get scored on accuracy using Brier scores. Market consensus is hidden until after submission to prevent anchoring bias. The system detects cognitive biases like overconfidence or extreme aversion and explains how each connects to real investing behavior.
+Forecast real-world economic events (Fed rate decisions, CPI, GDP, unemployment) and get scored on accuracy. Market consensus is hidden until after submission to prevent anchoring bias. The system detects cognitive biases like overconfidence or extreme aversion and explains how each connects to real investing behavior.
+
+### AI Decision Tutor
+A conversational AI assistant powered by Anthropic Claude (with OpenAI fallback) that adapts its tone, complexity, and teaching style to the user's profile. The tutor is aware of the user's calibration history, saved strategies, and portfolio context — it gives personalized coaching, not generic responses.
+
+### Paper Trading
+Practice buying and selling stocks with $100k in simulated capital using real-time market data from Alpaca and Polygon.io. Place market or limit orders, track open positions with live P&L, and review trade history — decisions with feedback, without financial risk.
+
+### AI-Generated Investment Strategies
+Generates personalized strategies (value, growth, income, momentum, balanced, index) based on risk tolerance, goals, and experience. Each strategy includes specific asset allocations with rationale, risk analysis, and educational learning points.
 
 ### Personalized Onboarding
-A 5-section onboarding flow profiles the user's experience level, barriers, goals, risk tolerance, learning style, and time commitment. This generates a persona that drives the entire experience — from AI tutor tone to strategy recommendations to probability lab topics.
+A 5-section onboarding flow profiles the user's experience level, barriers, goals, risk tolerance, learning style, and time commitment. This generates a disposition persona that drives the entire experience — with the architecture designed to evolve toward behavioral fingerprinting through observed micro-decisions.
 
----
+## The Decision Intelligence Framework
+
+| Layer | What it does | Where it lives |
+|---|---|---|
+| **Disposition** | Archetype onboarding, risk profiling | Onboarding flow |
+| **Reasoning** | Probability Lab + Calibration Score | Prediction & scoring engine |
+| **Application** | Paper trading + AI tutor | Trading & chat |
+| **Memory** | Decision journal + pattern aggregation | History & diagnostics |
+
+The architecture is domain-agnostic — calibration measurement applies to any decision domain — while the current UI focuses on investing.
 
 ## Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
+|---|---|
 | Frontend | Next.js 16, React 19, Tailwind CSS v4, shadcn/ui |
 | State | React Query v5 (server), Zustand (UI) |
 | Charts | Recharts |
@@ -38,13 +50,11 @@ A 5-section onboarding flow profiles the user's experience level, barriers, goal
 | AI | Anthropic Claude (primary), OpenAI GPT-4o (fallback) |
 | Market Data | Alpaca Markets (paper trading), Polygon.io (quotes/search) |
 | Predictions | Kalshi (economic markets, read-only) |
-
----
+| Billing | Stripe |
 
 ## Getting Started
 
 ### Prerequisites
-
 - Python 3.11+
 - Node.js 18+
 - API keys for: Anthropic, Alpaca (paper), Polygon.io
@@ -83,32 +93,37 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to use the app.
+Open http://localhost:3000 to use the app.
 
----
+### Running Tests
+
+```bash
+cd backend
+pytest
+```
+
+The gamification engine alone carries 119 tests covering Brier scoring, score family transitions, and badge evaluation.
 
 ## Environment Variables
 
-### Backend (`.env`)
+### Backend (.env)
 
 | Variable | Description | Required |
-|----------|-------------|----------|
-| `DATABASE_URL` | Database connection string | Yes |
-| `JWT_SECRET_KEY` | Random string, min 32 chars | Yes |
-| `ANTHROPIC_API_KEY` | Anthropic Claude API key | Yes |
-| `ALPACA_API_KEY` | Alpaca paper trading API key | Yes |
-| `ALPACA_SECRET_KEY` | Alpaca paper trading secret | Yes |
-| `POLYGON_API_KEY` | Polygon.io market data key | Yes |
-| `OPENAI_API_KEY` | OpenAI fallback (optional) | No |
-| `CORS_ORIGINS` | Allowed frontend origins | Yes |
+|---|---|---|
+| DATABASE_URL | Database connection string | Yes |
+| JWT_SECRET_KEY | Random string, min 32 chars | Yes |
+| ANTHROPIC_API_KEY | Anthropic Claude API key | Yes |
+| ALPACA_API_KEY | Alpaca paper trading API key | Yes |
+| ALPACA_SECRET_KEY | Alpaca paper trading secret | Yes |
+| POLYGON_API_KEY | Polygon.io market data key | Yes |
+| OPENAI_API_KEY | OpenAI fallback (optional) | No |
+| CORS_ORIGINS | Allowed frontend origins | Yes |
 
-### Frontend (`.env.local`)
+### Frontend (.env.local)
 
 | Variable | Description | Default |
-|----------|-------------|---------|
-| `NEXT_PUBLIC_API_URL` | Backend API URL | `http://localhost:8000/api` |
-
----
+|---|---|---|
+| NEXT_PUBLIC_API_URL | Backend API URL | http://localhost:8000/api |
 
 ## Project Structure
 
@@ -116,90 +131,89 @@ Open [http://localhost:3000](http://localhost:3000) to use the app.
 lcs-engine-v2/
 ├── backend/
 │   ├── app/
-│   │   ├── main.py          # FastAPI app + CORS + lifespan
-│   │   ├── settings.py      # Pydantic settings
-│   │   ├── models/          # SQLAlchemy models
-│   │   ├── schemas/         # Pydantic request/response schemas
-│   │   ├── routes/          # API endpoints
-│   │   ├── services/        # Business logic + AI clients
-│   │   └── database.py      # DB engine + session
-│   ├── alembic/             # Database migrations
+│   │   ├── main.py              # FastAPI app + CORS + lifespan
+│   │   ├── settings.py          # Pydantic settings
+│   │   ├── models/              # SQLAlchemy models
+│   │   ├── schemas/             # Pydantic request/response schemas
+│   │   ├── routes/              # API endpoints
+│   │   ├── services/            # Business logic + AI clients
+│   │   │   └── gamification/    # Brier engine, score families, badges
+│   │   └── database.py          # DB engine + session
+│   ├── alembic/                 # Database migrations
+│   ├── tests/                   # Test suites (pytest)
 │   └── requirements.txt
 ├── frontend/
 │   ├── app/
-│   │   ├── (auth)/          # Login + register pages
-│   │   ├── (dashboard)/     # All authenticated pages
-│   │   └── page.tsx         # Landing page
-│   ├── components/          # Shared UI components
-│   ├── features/            # Feature-specific components
-│   ├── lib/api/             # API client + types
-│   └── stores/              # Zustand stores
+│   │   ├── (auth)/              # Login + register pages
+│   │   ├── (dashboard)/         # All authenticated pages
+│   │   └── page.tsx             # Landing page
+│   ├── components/              # Shared UI components
+│   ├── features/                # Feature-specific components
+│   ├── lib/api/                 # API client + types
+│   └── stores/                  # Zustand stores
+├── stripe_integration/          # Billing
+├── demo/                        # Demo assets
 └── .env.example
 ```
-
----
 
 ## API Overview
 
 | Group | Endpoints | Description |
-|-------|-----------|-------------|
-| Auth | `/api/auth/*` | Register, login, token refresh |
-| Onboarding | `/api/onboarding/*` | Profile questions, responses, completion |
-| Chat | `/api/chat/*` | Streaming AI conversations |
-| Strategies | `/api/strategies/*` | Generate, compare, explain strategies |
-| Trading | `/api/trading/*` | Portfolio, orders, quotes, search |
-| Probability | `/api/probability/*` | Markets, predictions, calibration |
-
----
+|---|---|---|
+| Auth | /api/auth/* | Register, login, token refresh |
+| Onboarding | /api/onboarding/* | Profile questions, responses, completion |
+| Chat | /api/chat/* | Streaming AI conversations |
+| Strategies | /api/strategies/* | Generate, compare, explain strategies |
+| Trading | /api/trading/* | Portfolio, orders, quotes, search |
+| Probability | /api/probability/* | Markets, predictions, calibration |
+| Gamification | /api/gamification/* | Calibration score, score history, badges, evaluation |
 
 ## What Makes It Different
 
-- **Profile-driven personalization** — an AI that knows your barriers, goals, and comfort level
+- **Calibration over outcomes** — the score grades reasoning quality, not luck; patent pending on the methodology
+- **Grounded resolution** — predictions resolve against external market data feeds, not self-report
 - **Anti-anchoring design** — market consensus hidden until you commit your prediction
 - **Cognitive bias detection** — surfaces overconfidence, anchoring, and extreme aversion patterns
+- **Profile-driven personalization** — an AI that knows your barriers, goals, and calibration history
 - **Resilient AI** — automatic fallback from Claude to GPT-4o with exponential backoff
-- **Learning by doing** — every feature (chat, trading, predicting, strategies) reinforces the others
-
----
+- **Learning by doing** — every feature (predicting, trading, chatting, strategizing) reinforces the loop
 
 ## Deployment
 
 ### Backend — Railway
 
-The backend deploys to [Railway](https://railway.app) using Docker with a PostgreSQL add-on.
+The backend deploys to Railway using Docker with a PostgreSQL add-on.
 
-1. Create a new Railway project and add a **PostgreSQL** service.
+1. Create a new Railway project and add a PostgreSQL service.
 2. Add a service from your GitHub repo. Railway will auto-detect `railway.toml`.
 3. Set these environment variables on the backend service:
 
 | Variable | Value |
-|----------|-------|
-| `DATABASE_URL` | Provided automatically by the Railway PostgreSQL plugin |
-| `JWT_SECRET_KEY` | Random string, min 32 chars |
-| `ANTHROPIC_API_KEY` | Your Anthropic API key |
-| `ALPACA_API_KEY` | Alpaca paper trading key |
-| `ALPACA_SECRET_KEY` | Alpaca paper trading secret |
-| `POLYGON_API_KEY` | Polygon.io key |
-| `CORS_ORIGINS` | Your Vercel frontend URL (e.g. `https://lcs-engine.vercel.app`) |
+|---|---|
+| DATABASE_URL | Provided automatically by the Railway PostgreSQL plugin |
+| JWT_SECRET_KEY | Random string, min 32 chars |
+| ANTHROPIC_API_KEY | Your Anthropic API key |
+| ALPACA_API_KEY | Alpaca paper trading key |
+| ALPACA_SECRET_KEY | Alpaca paper trading secret |
+| POLYGON_API_KEY | Polygon.io key |
+| CORS_ORIGINS | Your Vercel frontend URL (e.g. https://lcs-engine.vercel.app) |
 
 4. Deploy. Railway builds from `backend/Dockerfile`, runs Alembic migrations on startup, then starts uvicorn.
 
 ### Frontend — Vercel
 
-The frontend deploys to [Vercel](https://vercel.com) with zero config.
+The frontend deploys to Vercel with zero config.
 
 1. Import the GitHub repo in Vercel.
-2. Set **Root Directory** to `frontend`.
+2. Set Root Directory to `frontend`.
 3. Add the environment variable:
 
 | Variable | Value |
-|----------|-------|
-| `NEXT_PUBLIC_API_URL` | `https://<your-railway-backend>.up.railway.app/api` |
+|---|---|
+| NEXT_PUBLIC_API_URL | https://<your-railway-backend>.up.railway.app/api |
 
 4. Deploy. Vercel auto-detects Next.js and builds the frontend.
 
----
+## Intellectual Property
 
-## License
-
-All rights reserved.
+The Calibration Score methodology — including the Brier scoring engine, score family system, behavioral fingerprinting, and dynamic risk profiling — is patent pending. All rights reserved.
