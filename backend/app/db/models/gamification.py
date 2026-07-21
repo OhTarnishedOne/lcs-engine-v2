@@ -93,10 +93,16 @@ class Decision(Base):
     updated_at      = Column(DateTime, default=func.now(), onupdate=func.now())
     extra           = Column(JSONB, nullable=True)
 
-    user            = relationship("User")
-    question_ref    = relationship("CuratedQuestion")
-    review          = relationship("DecisionReview", uselist=False)
-    ai_tutor_session = relationship("AITutorSession", uselist=False)
+    user            = relationship("User", viewonly=True)
+    question_ref    = relationship(
+        "CuratedQuestion", back_populates="logged_decisions"
+    )
+    review          = relationship(
+        "DecisionReview", back_populates="decision", uselist=False
+    )
+    ai_tutor_session = relationship(
+        "AITutorSession", back_populates="decision", uselist=False
+    )
 
     __table_args__ = (
         CheckConstraint("confidence >= 0.0 AND confidence <= 1.0", name="confidence_range"),
@@ -126,8 +132,8 @@ class DecisionReview(Base):
     created_at      = Column(DateTime, default=func.now())
     updated_at      = Column(DateTime, default=func.now(), onupdate=func.now())
 
-    decision = relationship("Decision")
-    user     = relationship("User")
+    decision = relationship("Decision", back_populates="review")
+    user     = relationship("User", viewonly=True)
 
     __table_args__ = (
         Index("ix_reviews_user_id", "user_id"),
@@ -166,7 +172,7 @@ class UserGamificationProfile(Base):
     created_at         = Column(DateTime, default=func.now())
     updated_at         = Column(DateTime, default=func.now(), onupdate=func.now())
 
-    user = relationship("User")
+    user = relationship("User", viewonly=True)
 
     __table_args__ = (
         Index("ix_gamification_profiles_user_id", "user_id"),
@@ -194,7 +200,7 @@ class UserScoreSnapshot(Base):
     triggered_by       = Column(UUID(as_uuid=True), ForeignKey("decisions.id"), nullable=True)
     snapshot_at        = Column(DateTime, default=func.now())
 
-    user = relationship("User")
+    user = relationship("User", viewonly=True)
 
     __table_args__ = (
         Index("ix_snapshots_user_id", "user_id"),
@@ -213,7 +219,7 @@ class UserBadge(Base):
     points_awarded = Column(Integer, default=0)
     earned_at   = Column(DateTime, default=func.now())
 
-    user = relationship("User")
+    user = relationship("User", viewonly=True)
 
     __table_args__ = (
         Index("ix_user_badges_user_badge", "user_id", "badge_slug", unique=True),
@@ -234,7 +240,7 @@ class PointsLedger(Base):
     running_total = Column(Integer, nullable=False)
     created_at    = Column(DateTime, default=func.now())
 
-    user = relationship("User")
+    user = relationship("User", viewonly=True)
 
     __table_args__ = (
         Index("ix_points_ledger_user_id", "user_id"),
@@ -259,7 +265,7 @@ class CuratedQuestion(Base):
     resolved_outcome     = Column(Boolean, nullable=True)
     created_at           = Column(DateTime, default=func.now())
 
-    logged_decisions = relationship("Decision")
+    logged_decisions = relationship("Decision", back_populates="question_ref")
 
     __table_args__ = (
         Index("ix_curated_questions_domain", "domain"),
@@ -281,8 +287,8 @@ class AITutorSession(Base):
     points_awarded      = Column(Integer, default=0)
     created_at          = Column(DateTime, default=func.now())
 
-    user     = relationship("User")
-    decision = relationship("Decision")
+    user     = relationship("User", viewonly=True)
+    decision = relationship("Decision", back_populates="ai_tutor_session")
 
 
 class InsightLoop(Base):
@@ -304,7 +310,7 @@ class InsightLoop(Base):
     created_at        = Column(DateTime, default=func.now())
     updated_at        = Column(DateTime, default=func.now(), onupdate=func.now())
 
-    user = relationship("User")
+    user = relationship("User", viewonly=True)
 
     __table_args__ = (
         Index("ix_insight_loops_user_id", "user_id"),
