@@ -195,32 +195,32 @@ class TestProcessScore:
 
 class TestCalibrationScore:
 
-    def test_hidden_before_10_calls(self):
-        """Calibration Score must be None before 10 resolved decisions."""
+    def test_hidden_before_5_calls(self):
+        """Calibration Score must be None before 5 resolved decisions (ADR-001)."""
         db      = make_db_session()
         updater = ScoreFamilyUpdater(db)
         profile = make_profile(calibration_score=None)
 
-        for resolved_calls in range(1, 10):
+        for resolved_calls in range(1, 5):
             score, unlocked = updater._calibration_score(uuid4(), profile, resolved_calls)
             assert score is None, f"Should be None at {resolved_calls} calls"
             assert unlocked is False
 
-    def test_unlocks_at_10_calls(self):
-        """Calibration Score unlocks exactly at 10 resolved decisions."""
+    def test_unlocks_at_5_calls(self):
+        """Calibration Score becomes visible at 5 resolved decisions (ADR-001 provisional)."""
         decisions = [
             MagicMock(
                 confidence=0.7,
                 outcome_binary=True,
                 status=DecisionStatus.RESOLVED,
             )
-            for _ in range(10)
+            for _ in range(5)
         ]
         db = make_db_session(resolved_decisions=decisions)
         updater = ScoreFamilyUpdater(db)
         profile = make_profile(calibration_score=None)
 
-        score, unlocked = updater._calibration_score(uuid4(), profile, resolved_calls=10)
+        score, unlocked = updater._calibration_score(uuid4(), profile, resolved_calls=5)
 
         assert score is not None
         assert unlocked is True
@@ -229,13 +229,13 @@ class TestCalibrationScore:
         """If calibration_score was already set, just_unlocked is False."""
         decisions = [
             MagicMock(confidence=0.7, outcome_binary=True, status=DecisionStatus.RESOLVED)
-            for _ in range(10)
+            for _ in range(5)
         ]
         db = make_db_session(resolved_decisions=decisions)
         updater = ScoreFamilyUpdater(db)
         profile = make_profile(calibration_score=72.0)  # Already had a score
 
-        _, unlocked = updater._calibration_score(uuid4(), profile, resolved_calls=10)
+        _, unlocked = updater._calibration_score(uuid4(), profile, resolved_calls=5)
         assert unlocked is False
 
     def test_calibration_score_uses_brier_formula(self):
@@ -243,18 +243,18 @@ class TestCalibrationScore:
         With all decisions at 70% confidence, outcome True:
         Brier = (0.7-1)^2 = 0.09 each
         avg_brier = 0.09
-        calibration_score = 100 * (1 - 0.09) = 91.0
+        calibration_score = 100 * (1 - 2 * 0.09) = 82.0 (ADR-001)
         """
         decisions = [
             MagicMock(confidence=0.7, outcome_binary=True, status=DecisionStatus.RESOLVED)
-            for _ in range(10)
+            for _ in range(5)
         ]
         db      = make_db_session(resolved_decisions=decisions)
         updater = ScoreFamilyUpdater(db)
         profile = make_profile(calibration_score=None)
 
-        score, _ = updater._calibration_score(uuid4(), profile, resolved_calls=10)
-        assert score == pytest.approx(91.0, abs=0.1)
+        score, _ = updater._calibration_score(uuid4(), profile, resolved_calls=5)
+        assert score == pytest.approx(82.0, abs=0.1)
 
     def test_calibration_score_in_range(self):
         """Calibration score must always be 0–100."""

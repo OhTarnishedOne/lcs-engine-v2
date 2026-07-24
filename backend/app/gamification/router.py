@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from ..deps import get_db, get_current_user
 from ..db.models import User
+from .user_ids import user_id_to_uuid
 from ..db.models.gamification import (
     BadgeSlug,
     Decision,
@@ -125,7 +126,7 @@ _PERIODS: dict[str, Optional[timedelta]] = {
 
 
 def _user_uuid(user: User) -> UUID:
-    return UUID(str(user.id))
+    return user_id_to_uuid(user.id)
 
 
 def _resolve_period(period: str) -> Optional[datetime]:
@@ -200,9 +201,10 @@ def _trend_from_snapshots(
 
 
 def _brier_from_calibration(calibration_score: Optional[float]) -> Optional[float]:
+    """Inverse of ADR-001: score = 100 * (1 - 2 * brier)."""
     if calibration_score is None:
         return None
-    return round(1.0 - (calibration_score / 100.0), 6)
+    return round((1.0 - (calibration_score / 100.0)) / 2.0, 6)
 
 
 def _family_transitions(

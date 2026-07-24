@@ -18,9 +18,9 @@ Brier Score formula (binary outcomes):
     Perfect calibration = 0.0. Worst possible = 1.0.
 
 User-facing Calibration Score (inverted, higher = better):
-    Calibration Score = 100 * (1 - average_brier)
+    Calibration Score = 100 * (1 - 2 * average_brier), clamped to [0, 100]
 
-Only meaningful after 10+ resolved decisions.
+Visible at 5 resolved decisions (provisional); established at 10.
 """
 
 from __future__ import annotations
@@ -57,7 +57,7 @@ class RollingBrierResult:
     The basis for UserGamificationProfile.calibration_score.
     """
     average_brier: float         # Mean BS across all decisions (lower = better)
-    calibration_score: float     # 100 * (1 - average_brier), 0–100 (higher = better)
+    calibration_score: float     # 100 * (1 - 2 * average_brier), 0–100 (higher = better)
     total_decisions: int         # Number of decisions included
     calibrated_count: int        # Decisions within ±15pp
     calibration_rate: float      # calibrated_count / total_decisions
@@ -87,8 +87,10 @@ class BrierScoreCalculator:
     MODERATE_THRESHOLD   = 40   # ±25–40pp = moderate
                                 # >40pp = severe
 
-    # Minimum decisions before Calibration Score is shown to the user
-    MIN_DECISIONS_TO_SHOW = 10
+    # ADR-001: visible at 5 (provisional), established at 10
+    CALIBRATION_VISIBLE = 5
+    CALIBRATION_ESTABLISHED = 10
+    MIN_DECISIONS_TO_SHOW = CALIBRATION_VISIBLE
 
     # ---------------------------------------------------------------------------
     # 1. calculate_brier_score
@@ -155,7 +157,7 @@ class BrierScoreCalculator:
         """
         Convert average Brier Score to the user-facing Calibration Score.
 
-        Formula: Calibration Score = 100 * (1 - avg_brier)
+        Formula (ADR-001): Calibration Score = 100 * (1 - 2 * avg_brier), clamped [0, 100]
 
         The inversion means higher = better for the user, which is
         more intuitive than "lower Brier is better."
@@ -168,7 +170,8 @@ class BrierScoreCalculator:
         """
         if not 0.0 <= avg_brier <= 1.0:
             raise ValueError(f"avg_brier must be 0.0–1.0, got {avg_brier}")
-        return round(100.0 * (1.0 - avg_brier), 2)
+        raw = 100.0 * (1.0 - 2.0 * avg_brier)
+        return round(max(0.0, min(100.0, raw)), 2)
 
     # ---------------------------------------------------------------------------
     # 4. calculate — convenience method (single decision, full result)

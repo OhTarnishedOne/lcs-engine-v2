@@ -50,7 +50,9 @@ class ScoreFamilyUpdate:
 
 class ScoreFamilyUpdater:
 
-    CALIBRATION_UNLOCK = 10
+    # ADR-001: score visible at 5 (provisional), established at 10
+    CALIBRATION_VISIBLE = 5
+    CALIBRATION_ESTABLISHED = 10
     IMPROVEMENT_UNLOCK = 30
 
     def __init__(self, db: Session):
@@ -176,11 +178,11 @@ class ScoreFamilyUpdater:
         profile:        UserGamificationProfile,
         resolved_calls: int,
     ) -> tuple[Optional[float], bool]:
-        if resolved_calls < self.CALIBRATION_UNLOCK:
+        if resolved_calls < self.CALIBRATION_VISIBLE:
             return None, False
 
         just_unlocked = (
-            resolved_calls == self.CALIBRATION_UNLOCK
+            resolved_calls == self.CALIBRATION_VISIBLE
             and profile.calibration_score is None
         )
 

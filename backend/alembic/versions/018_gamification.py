@@ -23,7 +23,8 @@ DECISION_STATUS = ('pending', 'resolved', 'expired', 'cancelled')
 OUTCOME_SOURCE = ('auto_market', 'self_reported')
 TIER_LEVEL = ('instinctive', 'reflective', 'calibrated', 'strategic', 'architect')
 BADGE_SLUG = (
-    'first_call', 'what_would_change', 'seven_day_streak', 'thirty_day_streak',
+    'first_call', 'what_would_change', 'process_builder', 'seven_day_streak',
+    'thirty_day_streak',
     'calibrated_run', 'stayed_calibrated_drawdown',
     'good_loser', 'humble_winner', 'avoided_revenge', 'revised_thesis',
     'bias_corrected', 'loop_closed', 'skill_transferred', 'stable_under_pressure',
@@ -49,7 +50,8 @@ def upgrade() -> None:
     )
     op.execute(
         "CREATE TYPE IF NOT EXISTS badgeslug AS ENUM "
-        "('first_call', 'what_would_change', 'seven_day_streak', 'thirty_day_streak', "
+        "('first_call', 'what_would_change', 'process_builder', "
+        "'seven_day_streak', 'thirty_day_streak', "
         "'calibrated_run', 'stayed_calibrated_drawdown', "
         "'good_loser', 'humble_winner', 'avoided_revenge', 'revised_thesis', "
         "'bias_corrected', 'loop_closed', 'skill_transferred', 'stable_under_pressure')"
@@ -209,6 +211,7 @@ def upgrade() -> None:
             postgresql.JSONB(),
             server_default=sa.text("'[\"investing\"]'::jsonb"),
         ),
+        sa.Column('last_trend_bonus_at', sa.DateTime(), nullable=True),
         sa.Column('created_at', sa.DateTime(), server_default=sa.func.now()),
         sa.Column('updated_at', sa.DateTime(), server_default=sa.func.now()),
     )

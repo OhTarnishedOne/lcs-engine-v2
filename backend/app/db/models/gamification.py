@@ -9,13 +9,15 @@ from enum import Enum as PyEnum
 
 from sqlalchemy import (
     Column, String, Float, Integer, Boolean, DateTime,
-    ForeignKey, Text, Enum, CheckConstraint, Index
+    ForeignKey, Text, Enum, CheckConstraint, Index, JSON,
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.database import Base
+
+JSONType = JSON().with_variant(JSONB(), "postgresql")
 
 
 class DecisionDomain(str, PyEnum):
@@ -91,7 +93,7 @@ class Decision(Base):
     calibration_delta = Column(Float, nullable=True)
     created_at      = Column(DateTime, default=func.now())
     updated_at      = Column(DateTime, default=func.now(), onupdate=func.now())
-    extra           = Column(JSONB, nullable=True)
+    extra           = Column(JSONType, nullable=True)
 
     user            = relationship("User", viewonly=True)
     question_ref    = relationship(
@@ -164,10 +166,10 @@ class UserGamificationProfile(Base):
     resolved_calls     = Column(Integer, default=0)
     calibrated_calls   = Column(Integer, default=0)
     reviewed_calls     = Column(Integer, default=0)
-    known_biases       = Column(JSONB, nullable=True)
+    known_biases       = Column(JSONType, nullable=True)
     stable_under_pressure            = Column(Boolean, default=False)
     stable_under_pressure_earned_at  = Column(DateTime, nullable=True)
-    domains_unlocked   = Column(JSONB, default=lambda: ["investing"])
+    domains_unlocked   = Column(JSONType, default=lambda: ["investing"])
     last_trend_bonus_at = Column(DateTime, nullable=True)  # FIX #4: idempotency guard
     created_at         = Column(DateTime, default=func.now())
     updated_at         = Column(DateTime, default=func.now(), onupdate=func.now())
@@ -195,7 +197,7 @@ class UserScoreSnapshot(Base):
     total_calls        = Column(Integer, default=0)
     resolved_calls     = Column(Integer, default=0)
     reviewed_calls     = Column(Integer, default=0)
-    domain_scores      = Column(JSONB, nullable=True)
+    domain_scores      = Column(JSONType, nullable=True)
     rolling_brier      = Column(Float, nullable=True)
     triggered_by       = Column(UUID(as_uuid=True), ForeignKey("decisions.id"), nullable=True)
     snapshot_at        = Column(DateTime, default=func.now())
@@ -257,7 +259,7 @@ class CuratedQuestion(Base):
     domain               = Column(Enum(DecisionDomain), nullable=False)
     resolution_type      = Column(String(50), nullable=True)
     resolution_ticker    = Column(String(20), nullable=True)
-    resolution_condition = Column(JSONB, nullable=True)
+    resolution_condition = Column(JSONType, nullable=True)
     is_active            = Column(Boolean, default=True)
     active_from          = Column(DateTime, nullable=True)
     expires_at           = Column(DateTime, nullable=True)

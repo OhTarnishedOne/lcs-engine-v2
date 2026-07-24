@@ -294,6 +294,30 @@ class ProbabilityService:
         for user_id in user_ids:
             self._update_calibration(user_id)
 
+        # Dual-write to gamification engine (ADR-001). Failures must not break Lab.
+        for pred in predictions:
+            try:
+                from ..services.gamification.probability_bridge import (
+                    sync_prediction_resolution_to_gamification,
+                )
+
+                sync_prediction_resolution_to_gamification(self.db, pred, market, actual)
+            except Exception:
+                logger.exception(
+                    "Gamification dual-write failed for prediction %s (market %s)",
+                    pred.id,
+                    market_id,
+                )
+
+        try:
+            self.db.commit()
+        except Exception:
+            logger.exception(
+                "Gamification dual-write commit failed for market %s",
+                market_id,
+            )
+            self.db.rollback()
+
         return len(predictions)
 
     def _update_calibration_counts(self, user_id: str):

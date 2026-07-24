@@ -139,14 +139,18 @@ class TestConvertBrierToCalibrationScore:
         """avg_brier=1.0 → Calibration Score = 0"""
         assert convert_brier_to_calibration_score(1.0) == 0.0
 
-    def test_half_brier_gives_50(self):
-        """avg_brier=0.5 → Calibration Score = 50"""
-        assert convert_brier_to_calibration_score(0.5) == 50.0
+    def test_half_brier_gives_zero(self):
+        """avg_brier=0.5 → Calibration Score = 0 (ADR-001)"""
+        assert convert_brier_to_calibration_score(0.5) == 0.0
+
+    def test_coin_flip_brier_gives_fifty(self):
+        """avg_brier=0.25 → Calibration Score = 50 (ADR-001 honest anchor)"""
+        assert convert_brier_to_calibration_score(0.25) == 50.0
 
     def test_formula_correctness(self):
-        """CS = 100 * (1 - avg_brier)"""
+        """CS = 100 * (1 - 2 * avg_brier), clamped [0, 100] per ADR-001"""
         avg_brier = 0.09
-        expected  = 100 * (1 - avg_brier)
+        expected  = 100 * (1 - 2 * avg_brier)
         assert convert_brier_to_calibration_score(avg_brier) == pytest.approx(expected, abs=1e-4)
 
     def test_out_of_range_raises(self):
@@ -235,7 +239,7 @@ class TestCalculateRolling:
         assert 0.0 <= result.calibration_score <= 100.0
 
     def test_calibration_score_formula(self):
-        """calibration_score = 100 * (1 - average_brier)"""
+        """calibration_score = 100 * (1 - 2 * average_brier) per ADR-001"""
         decisions = [(0.7, True), (0.5, False)]
         result    = BrierScoreCalculator.calculate_rolling(decisions)
         briers    = [
@@ -320,12 +324,12 @@ class TestProductSpecScenarios:
 
     def test_calibration_score_from_spec_example(self):
         """
-        From the LCS spec:
-            Calibration Score = 100 * (1 - average_brier)
-        With average_brier = 0.09 → CS = 91.0
+        From ADR-001 / LCS spec:
+            Calibration Score = 100 * (1 - 2 * average_brier)
+        With average_brier = 0.09 → CS = 82.0
         """
         cs = convert_brier_to_calibration_score(0.09)
-        assert cs == pytest.approx(91.0, abs=1e-4)
+        assert cs == pytest.approx(82.0, abs=1e-4)
 
     def test_good_loser_scenario(self):
         """
