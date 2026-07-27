@@ -26,7 +26,8 @@ until **10**, at which point it is labeled "established."
   earned. The provisional/established label captures statistical caution
   without taking anything away.
 - Patent alignment: formula and thresholds match the provisional patent
-  specification (Section 6, Claims 2-3), filing in progress.
+  specification (Section 6, Claims 2-3). Filed as U.S. Provisional
+  Application No. 64/119,278 on July 25, 2026.  specification (Section 6, Claims 2-3), filing in progress.
 
 ### Consequences
 - Gamification engine's scoring adapts to the Lab formula (engine
