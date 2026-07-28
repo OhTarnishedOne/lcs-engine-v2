@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 /**
- * Middleware for route protection.
+ * Next.js proxy for route protection.
  *
  * Single source of truth for auth redirects.
  * Reads access_token from cookies (server-side compatible).
