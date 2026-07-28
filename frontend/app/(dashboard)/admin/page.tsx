@@ -18,6 +18,13 @@ import { Button } from "@/components/ui/button";
 
 type Tab = "overview" | "users" | "moderation";
 
+type AdminUser = {
+  id: string;
+  email: string;
+  is_admin: boolean;
+  [key: string]: unknown;
+};
+
 export default function AdminPage() {
   const { user } = useAuthStore();
   const [tab, setTab] = useState<Tab>("overview");
@@ -128,7 +135,7 @@ function OverviewTab() {
               <s.icon className="h-4 w-4 text-gray-400" />
               <p className="text-xs text-gray-400">{s.label}</p>
             </div>
-            <p className="text-2xl font-bold font-mono-nums text-white">{s.value}</p>
+            <p className="text-2xl font-bold font-mono-nums text-white">{String(s.value)}</p>
           </motion.div>
         ))}
       </div>
@@ -265,7 +272,7 @@ function UsersTab() {
   const queryClient = useQueryClient();
   const { data: users, isLoading } = useQuery({
     queryKey: ["admin-users"],
-    queryFn: () => api.get<Record<string, unknown>[]>("/admin/dashboard/users"),
+    queryFn: () => api.get<AdminUser[]>("/admin/dashboard/users"),
   });
 
   const updateMutation = useMutation({
@@ -304,7 +311,7 @@ function UsersTab() {
               <tr key={u.id as string} className="border-b border-gray-800/50 hover:bg-[#1A2942]/30">
                 <td className="p-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-white">{u.email as string}</span>
+                    <span className="text-white">{u.email}</span>
                     {u.is_admin && (
                       <span className="rounded-full bg-[#00D4AA]/20 px-1.5 py-0.5 text-[10px] font-semibold text-[#00D4AA]">ADMIN</span>
                     )}

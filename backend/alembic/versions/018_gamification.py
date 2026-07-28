@@ -33,28 +33,44 @@ BADGE_SLUG = (
 
 def upgrade() -> None:
     op.execute(
-        "CREATE TYPE IF NOT EXISTS decisiondomain AS ENUM "
-        "('investing', 'career', 'personal_finance', 'business', 'life')"
+        """
+        DO $$ BEGIN
+            CREATE TYPE decisiondomain AS ENUM ('investing', 'career', 'personal_finance', 'business', 'life');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+        """
     )
     op.execute(
-        "CREATE TYPE IF NOT EXISTS decisionstatus AS ENUM "
-        "('pending', 'resolved', 'expired', 'cancelled')"
+        """
+        DO $$ BEGIN
+            CREATE TYPE decisionstatus AS ENUM ('pending', 'resolved', 'expired', 'cancelled');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+        """
     )
     op.execute(
-        "CREATE TYPE IF NOT EXISTS outcomesource AS ENUM "
-        "('auto_market', 'self_reported')"
+        """
+        DO $$ BEGIN
+            CREATE TYPE outcomesource AS ENUM ('auto_market', 'self_reported');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+        """
     )
     op.execute(
-        "CREATE TYPE IF NOT EXISTS tierlevel AS ENUM "
-        "('instinctive', 'reflective', 'calibrated', 'strategic', 'architect')"
+        """
+        DO $$ BEGIN
+            CREATE TYPE tierlevel AS ENUM ('instinctive', 'reflective', 'calibrated', 'strategic', 'architect');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+        """
     )
     op.execute(
-        "CREATE TYPE IF NOT EXISTS badgeslug AS ENUM "
-        "('first_call', 'what_would_change', 'process_builder', "
-        "'seven_day_streak', 'thirty_day_streak', "
-        "'calibrated_run', 'stayed_calibrated_drawdown', "
-        "'good_loser', 'humble_winner', 'avoided_revenge', 'revised_thesis', "
-        "'bias_corrected', 'loop_closed', 'skill_transferred', 'stable_under_pressure')"
+        """
+        DO $$ BEGIN
+            CREATE TYPE badgeslug AS ENUM ('first_call', 'what_would_change', 'process_builder', 'seven_day_streak', 'thirty_day_streak', 'calibrated_run', 'stayed_calibrated_drawdown', 'good_loser', 'humble_winner', 'avoided_revenge', 'revised_thesis', 'bias_corrected', 'loop_closed', 'skill_transferred', 'stable_under_pressure');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+        """
     )
 
     op.create_table(
