@@ -8,7 +8,7 @@ import type { NextRequest } from "next/server";
  * Reads access_token from cookies (server-side compatible).
  */
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get("access_token")?.value;
   const hostname = request.headers.get("host") || "";
