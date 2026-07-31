@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 /**
- * Middleware for route protection.
+ * Next.js 16 proxy for route protection (Node.js runtime).
  *
- * Single source of truth for auth redirects.
- * Reads access_token from cookies (server-side compatible).
+ * Keep imports limited to `next/server` — do not import app/lib code here.
+ * Edge middleware bundles `ua-parser-js` from `next/server`, which crashes with
+ * `ReferenceError: __dirname is not defined`; the proxy convention avoids that.
  */
 
 export function proxy(request: NextRequest) {
