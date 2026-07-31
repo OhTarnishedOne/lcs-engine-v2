@@ -30,6 +30,13 @@ BADGE_SLUG = (
     'bias_corrected', 'loop_closed', 'skill_transferred', 'stable_under_pressure',
 )
 
+# postgresql.ENUM required — sa.Enum ignores create_type=False and re-emits CREATE TYPE.
+decisiondomain_enum = postgresql.ENUM(*DECISION_DOMAIN, name='decisiondomain', create_type=False)
+decisionstatus_enum = postgresql.ENUM(*DECISION_STATUS, name='decisionstatus', create_type=False)
+outcomesource_enum = postgresql.ENUM(*OUTCOME_SOURCE, name='outcomesource', create_type=False)
+tierlevel_enum = postgresql.ENUM(*TIER_LEVEL, name='tierlevel', create_type=False)
+badgeslug_enum = postgresql.ENUM(*BADGE_SLUG, name='badgeslug', create_type=False)
+
 
 def upgrade() -> None:
     op.execute(
@@ -79,7 +86,7 @@ def upgrade() -> None:
         sa.Column('question', sa.Text(), nullable=False),
         sa.Column(
             'domain',
-            sa.Enum(*DECISION_DOMAIN, name='decisiondomain', create_type=False),
+            decisiondomain_enum,
             nullable=False,
         ),
         sa.Column('resolution_type', sa.String(length=50), nullable=True),
@@ -107,7 +114,7 @@ def upgrade() -> None:
         sa.Column('question', sa.Text(), nullable=False),
         sa.Column(
             'domain',
-            sa.Enum(*DECISION_DOMAIN, name='decisiondomain', create_type=False),
+            decisiondomain_enum,
             nullable=False,
         ),
         sa.Column('confidence', sa.Float(), nullable=False),
@@ -123,7 +130,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             'status',
-            sa.Enum(*DECISION_STATUS, name='decisionstatus', create_type=False),
+            decisionstatus_enum,
             nullable=False,
             server_default='pending',
         ),
@@ -131,7 +138,7 @@ def upgrade() -> None:
         sa.Column('outcome_binary', sa.Boolean(), nullable=True),
         sa.Column(
             'outcome_source',
-            sa.Enum(*OUTCOME_SOURCE, name='outcomesource', create_type=False),
+            outcomesource_enum,
             nullable=True,
         ),
         sa.Column('outcome_notes', sa.Text(), nullable=True),
@@ -204,7 +211,7 @@ def upgrade() -> None:
         sa.Column('lcs_score', sa.Float(), server_default=sa.text('0.0')),
         sa.Column(
             'tier',
-            sa.Enum(*TIER_LEVEL, name='tierlevel', create_type=False),
+            tierlevel_enum,
             server_default='instinctive',
         ),
         sa.Column('tier_updated_at', sa.DateTime(), nullable=True),
@@ -258,7 +265,7 @@ def upgrade() -> None:
         sa.Column('lcs_score', sa.Float(), server_default=sa.text('0.0')),
         sa.Column(
             'tier',
-            sa.Enum(*TIER_LEVEL, name='tierlevel', create_type=False),
+            tierlevel_enum,
             server_default='instinctive',
         ),
         sa.Column('total_calls', sa.Integer(), server_default=sa.text('0')),
@@ -288,7 +295,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             'badge_slug',
-            sa.Enum(*BADGE_SLUG, name='badgeslug', create_type=False),
+            badgeslug_enum,
             nullable=False,
         ),
         sa.Column(
@@ -339,7 +346,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             'badge_slug',
-            sa.Enum(*BADGE_SLUG, name='badgeslug', create_type=False),
+            badgeslug_enum,
             nullable=True,
         ),
         sa.Column('running_total', sa.Integer(), nullable=False),
@@ -385,7 +392,7 @@ def upgrade() -> None:
         sa.Column('bias_name', sa.String(length=100), nullable=False),
         sa.Column(
             'domain',
-            sa.Enum(*DECISION_DOMAIN, name='decisiondomain', create_type=False),
+            decisiondomain_enum,
             nullable=False,
         ),
         sa.Column('detected_at', sa.DateTime(), nullable=False),
