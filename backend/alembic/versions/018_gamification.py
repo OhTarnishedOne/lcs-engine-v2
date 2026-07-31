@@ -107,7 +107,7 @@ def upgrade() -> None:
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column(
             'user_id',
-            postgresql.UUID(as_uuid=True),
+            sa.String(length=36),
             sa.ForeignKey('users.id', ondelete='CASCADE'),
             nullable=False,
         ),
@@ -170,7 +170,7 @@ def upgrade() -> None:
         ),
         sa.Column(
             'user_id',
-            postgresql.UUID(as_uuid=True),
+            sa.String(length=36),
             sa.ForeignKey('users.id', ondelete='CASCADE'),
             nullable=False,
         ),
@@ -199,7 +199,7 @@ def upgrade() -> None:
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column(
             'user_id',
-            postgresql.UUID(as_uuid=True),
+            sa.String(length=36),
             sa.ForeignKey('users.id', ondelete='CASCADE'),
             nullable=False,
             unique=True,
@@ -254,7 +254,7 @@ def upgrade() -> None:
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column(
             'user_id',
-            postgresql.UUID(as_uuid=True),
+            sa.String(length=36),
             sa.ForeignKey('users.id', ondelete='CASCADE'),
             nullable=False,
         ),
@@ -289,7 +289,7 @@ def upgrade() -> None:
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column(
             'user_id',
-            postgresql.UUID(as_uuid=True),
+            sa.String(length=36),
             sa.ForeignKey('users.id', ondelete='CASCADE'),
             nullable=False,
         ),
@@ -325,7 +325,7 @@ def upgrade() -> None:
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column(
             'user_id',
-            postgresql.UUID(as_uuid=True),
+            sa.String(length=36),
             sa.ForeignKey('users.id', ondelete='CASCADE'),
             nullable=False,
         ),
@@ -360,7 +360,7 @@ def upgrade() -> None:
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column(
             'user_id',
-            postgresql.UUID(as_uuid=True),
+            sa.String(length=36),
             sa.ForeignKey('users.id', ondelete='CASCADE'),
             nullable=False,
         ),
@@ -385,7 +385,7 @@ def upgrade() -> None:
         sa.Column('id', postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column(
             'user_id',
-            postgresql.UUID(as_uuid=True),
+            sa.String(length=36),
             sa.ForeignKey('users.id', ondelete='CASCADE'),
             nullable=False,
         ),

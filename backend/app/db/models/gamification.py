@@ -16,6 +16,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.database import Base
+from app.gamification.user_ids import GamificationUserIdType
 
 JSONType = JSON().with_variant(JSONB(), "postgresql")
 
@@ -74,7 +75,7 @@ class Decision(Base):
     __tablename__ = "decisions"
 
     id              = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    user_id         = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id         = Column(GamificationUserIdType, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     question        = Column(Text, nullable=False)
     domain          = Column(Enum(DecisionDomain), nullable=False, default=DecisionDomain.INVESTING)
     confidence      = Column(Float, nullable=False)
@@ -120,7 +121,7 @@ class DecisionReview(Base):
 
     id              = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     decision_id     = Column(UUID(as_uuid=True), ForeignKey("decisions.id", ondelete="CASCADE"), nullable=False, unique=True)
-    user_id         = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id         = Column(GamificationUserIdType, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     outcome_attribution         = Column(Text, nullable=True)
     was_process_sound           = Column(Boolean, nullable=True)
     identified_bias             = Column(Text, nullable=True)
@@ -147,7 +148,7 @@ class UserGamificationProfile(Base):
     __tablename__ = "user_gamification_profiles"
 
     id              = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    user_id         = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
+    user_id         = Column(GamificationUserIdType, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
     process_score      = Column(Float, default=0.0)
     calibration_score  = Column(Float, nullable=True)
     reflection_score   = Column(Float, nullable=True)
@@ -187,7 +188,7 @@ class UserScoreSnapshot(Base):
     __tablename__ = "user_score_snapshots"
 
     id                 = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    user_id            = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id            = Column(GamificationUserIdType, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     process_score      = Column(Float, default=0.0)
     calibration_score  = Column(Float, default=0.0)
     reflection_score   = Column(Float, default=0.0)
@@ -214,7 +215,7 @@ class UserBadge(Base):
     __tablename__ = "user_badges"
 
     id          = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    user_id     = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id     = Column(GamificationUserIdType, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     badge_slug  = Column(Enum(BadgeSlug), nullable=False)
     triggered_by_decision_id = Column(UUID(as_uuid=True), ForeignKey("decisions.id"), nullable=True)
     triggered_by_review_id   = Column(UUID(as_uuid=True), ForeignKey("decision_reviews.id"), nullable=True)
@@ -232,7 +233,7 @@ class PointsLedger(Base):
     __tablename__ = "points_ledger"
 
     id            = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    user_id       = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id       = Column(GamificationUserIdType, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     points        = Column(Integer, nullable=False)
     reason        = Column(String(100), nullable=False)
     category      = Column(String(50), nullable=False)
@@ -279,7 +280,7 @@ class AITutorSession(Base):
     __tablename__ = "ai_tutor_sessions"
 
     id                  = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    user_id             = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id             = Column(GamificationUserIdType, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     decision_id         = Column(UUID(as_uuid=True), ForeignKey("decisions.id", ondelete="CASCADE"), nullable=False, unique=True)
     bias_flagged        = Column(String(100), nullable=True)
     bias_severity       = Column(Float, nullable=True)
@@ -297,7 +298,7 @@ class InsightLoop(Base):
     __tablename__ = "insight_loops"
 
     id                = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    user_id           = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id           = Column(GamificationUserIdType, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     bias_name         = Column(String(100), nullable=False)
     domain            = Column(Enum(DecisionDomain), nullable=False)
     detected_at       = Column(DateTime, nullable=False)
