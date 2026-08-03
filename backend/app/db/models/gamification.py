@@ -16,8 +16,14 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from app.database import Base
+from app.gamification.user_ids import GamificationUserIdType
 
 JSONType = JSON().with_variant(JSONB(), "postgresql")
+
+
+def _pg_enum(enum_cls: type[PyEnum]) -> Enum:
+    """Persist Python enum .value (lowercase) to match PostgreSQL native enums."""
+    return Enum(enum_cls, values_callable=lambda x: [e.value for e in x])
 
 
 class DecisionDomain(str, PyEnum):
@@ -74,19 +80,19 @@ class Decision(Base):
     __tablename__ = "decisions"
 
     id              = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    user_id         = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id         = Column(GamificationUserIdType, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     question        = Column(Text, nullable=False)
-    domain          = Column(Enum(DecisionDomain), nullable=False, default=DecisionDomain.INVESTING)
+    domain          = Column(_pg_enum(DecisionDomain), nullable=False, default=DecisionDomain.INVESTING)
     confidence      = Column(Float, nullable=False)
     reasoning       = Column(Text, nullable=True)
     falsification   = Column(Text, nullable=True)
     resolution_date = Column(DateTime, nullable=True)
     is_curated      = Column(Boolean, default=False)
     question_id     = Column(UUID(as_uuid=True), ForeignKey("curated_questions.id"), nullable=True)
-    status          = Column(Enum(DecisionStatus), default=DecisionStatus.PENDING, nullable=False)
+    status          = Column(_pg_enum(DecisionStatus), default=DecisionStatus.PENDING, nullable=False)
     locked_at       = Column(DateTime, default=func.now())
     outcome_binary  = Column(Boolean, nullable=True)
-    outcome_source  = Column(Enum(OutcomeSource), nullable=True)
+    outcome_source  = Column(_pg_enum(OutcomeSource), nullable=True)
     outcome_notes   = Column(Text, nullable=True)
     resolved_at     = Column(DateTime, nullable=True)
     brier_score     = Column(Float, nullable=True)
@@ -120,7 +126,7 @@ class DecisionReview(Base):
 
     id              = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     decision_id     = Column(UUID(as_uuid=True), ForeignKey("decisions.id", ondelete="CASCADE"), nullable=False, unique=True)
-    user_id         = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id         = Column(GamificationUserIdType, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     outcome_attribution         = Column(Text, nullable=True)
     was_process_sound           = Column(Boolean, nullable=True)
     identified_bias             = Column(Text, nullable=True)
@@ -147,13 +153,13 @@ class UserGamificationProfile(Base):
     __tablename__ = "user_gamification_profiles"
 
     id              = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    user_id         = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
+    user_id         = Column(GamificationUserIdType, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True)
     process_score      = Column(Float, default=0.0)
     calibration_score  = Column(Float, nullable=True)
     reflection_score   = Column(Float, nullable=True)
     improvement_score  = Column(Float, nullable=True)
     lcs_score          = Column(Float, default=0.0)
-    tier               = Column(Enum(TierLevel), default=TierLevel.INSTINCTIVE)
+    tier               = Column(_pg_enum(TierLevel), default=TierLevel.INSTINCTIVE)
     tier_updated_at    = Column(DateTime, nullable=True)
     total_points       = Column(Integer, default=0)
     logging_streak_days      = Column(Integer, default=0)
@@ -187,13 +193,13 @@ class UserScoreSnapshot(Base):
     __tablename__ = "user_score_snapshots"
 
     id                 = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    user_id            = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id            = Column(GamificationUserIdType, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     process_score      = Column(Float, default=0.0)
     calibration_score  = Column(Float, default=0.0)
     reflection_score   = Column(Float, default=0.0)
     improvement_score  = Column(Float, default=0.0)
     lcs_score          = Column(Float, default=0.0)
-    tier               = Column(Enum(TierLevel), default=TierLevel.INSTINCTIVE)
+    tier               = Column(_pg_enum(TierLevel), default=TierLevel.INSTINCTIVE)
     total_calls        = Column(Integer, default=0)
     resolved_calls     = Column(Integer, default=0)
     reviewed_calls     = Column(Integer, default=0)
@@ -214,8 +220,8 @@ class UserBadge(Base):
     __tablename__ = "user_badges"
 
     id          = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    user_id     = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    badge_slug  = Column(Enum(BadgeSlug), nullable=False)
+    user_id     = Column(GamificationUserIdType, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    badge_slug  = Column(_pg_enum(BadgeSlug), nullable=False)
     triggered_by_decision_id = Column(UUID(as_uuid=True), ForeignKey("decisions.id"), nullable=True)
     triggered_by_review_id   = Column(UUID(as_uuid=True), ForeignKey("decision_reviews.id"), nullable=True)
     points_awarded = Column(Integer, default=0)
@@ -232,13 +238,13 @@ class PointsLedger(Base):
     __tablename__ = "points_ledger"
 
     id            = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    user_id       = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id       = Column(GamificationUserIdType, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     points        = Column(Integer, nullable=False)
     reason        = Column(String(100), nullable=False)
     category      = Column(String(50), nullable=False)
     decision_id   = Column(UUID(as_uuid=True), ForeignKey("decisions.id"), nullable=True)
     review_id     = Column(UUID(as_uuid=True), ForeignKey("decision_reviews.id"), nullable=True)
-    badge_slug    = Column(Enum(BadgeSlug), nullable=True)
+    badge_slug    = Column(_pg_enum(BadgeSlug), nullable=True)
     running_total = Column(Integer, nullable=False)
     created_at    = Column(DateTime, default=func.now())
 
@@ -256,7 +262,7 @@ class CuratedQuestion(Base):
 
     id                   = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     question             = Column(Text, nullable=False)
-    domain               = Column(Enum(DecisionDomain), nullable=False)
+    domain               = Column(_pg_enum(DecisionDomain), nullable=False)
     resolution_type      = Column(String(50), nullable=True)
     resolution_ticker    = Column(String(20), nullable=True)
     resolution_condition = Column(JSONType, nullable=True)
@@ -279,7 +285,7 @@ class AITutorSession(Base):
     __tablename__ = "ai_tutor_sessions"
 
     id                  = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    user_id             = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id             = Column(GamificationUserIdType, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     decision_id         = Column(UUID(as_uuid=True), ForeignKey("decisions.id", ondelete="CASCADE"), nullable=False, unique=True)
     bias_flagged        = Column(String(100), nullable=True)
     bias_severity       = Column(Float, nullable=True)
@@ -297,9 +303,9 @@ class InsightLoop(Base):
     __tablename__ = "insight_loops"
 
     id                = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    user_id           = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id           = Column(GamificationUserIdType, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     bias_name         = Column(String(100), nullable=False)
-    domain            = Column(Enum(DecisionDomain), nullable=False)
+    domain            = Column(_pg_enum(DecisionDomain), nullable=False)
     detected_at       = Column(DateTime, nullable=False)
     acknowledged_at   = Column(DateTime, nullable=True)
     improved_at       = Column(DateTime, nullable=True)

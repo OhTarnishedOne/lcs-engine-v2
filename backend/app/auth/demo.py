@@ -208,6 +208,8 @@ async def cleanup_expired_guests(db: Session):
     Delete guest accounts expired 30+ days ago that were never converted.
     Called by the background job.
     """
+    from ..db.models import Strategy, StrategyComparison
+
     cutoff = datetime.now(UTC) - timedelta(days=30)
 
     expired_guests = (
@@ -221,7 +223,10 @@ async def cleanup_expired_guests(db: Session):
 
     deleted = 0
     for guest in expired_guests:
-        db.delete(guest)  # CASCADE handles related records
+        # Strategy backref causes SQLAlchemy to null user_id before DB CASCADE fires.
+        db.query(Strategy).filter(Strategy.user_id == guest.id).delete()
+        db.query(StrategyComparison).filter(StrategyComparison.user_id == guest.id).delete()
+        db.delete(guest)  # DB CASCADE handles remaining child records
         deleted += 1
 
     if deleted:

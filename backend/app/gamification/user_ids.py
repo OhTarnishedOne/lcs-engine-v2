@@ -1,8 +1,29 @@
-"""Explicit conversions between User.id (str) and gamification UUID columns."""
+"""Explicit conversions between User.id (str) and gamification user_id columns."""
 
 from __future__ import annotations
 
 from uuid import UUID
+
+from sqlalchemy import String, TypeDecorator
+
+
+class GamificationUserIdType(TypeDecorator):
+    """
+    users.id is String(36) on all dialects; gamification FK columns must match.
+  """
+
+    impl = String(36)
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        return uuid_to_user_id(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return user_id_to_uuid(value)
 
 
 def user_id_to_uuid(user_id: str | UUID) -> UUID:
