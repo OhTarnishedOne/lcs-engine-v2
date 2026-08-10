@@ -16,6 +16,7 @@ from .strategies.router import router as strategies_router
 from .trading.router import router as trading_router
 from .probability.router import router as probability_router
 from .decisions.router import router as decisions_router
+from .interventions.router import router as interventions_router
 from .probability.service import ProbabilityService
 from .probability.background import market_automation_loop
 from .gamification.router import router as gamification_router
@@ -92,6 +93,7 @@ app.include_router(admin_dashboard_router, prefix="/api")
 app.include_router(analytics_router, prefix="/api")
 app.include_router(gamification_router, prefix="/api/gamification")
 app.include_router(decisions_router, prefix="/api/decisions")
+app.include_router(interventions_router, prefix="/api/interventions")
 
 
 @app.get("/")

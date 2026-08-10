@@ -157,6 +157,41 @@ def detect_reflection_avoidance(
     )
 
 
+def compute_metric(
+    slug: str,
+    *,
+    resolved: list,
+    all_decisions: list,
+    reviewed_count: int,
+) -> Optional[float]:
+    """
+    Raw metric value for a weakness slug, independent of any threshold. Used to
+    capture baseline / post-intervention numbers so before/after comparison is
+    honest even once the weakness drops below its detection threshold.
+    """
+    if slug == "overconfidence":
+        high = [d for d in resolved if abs(d.confidence - 0.5) >= HIGH_CONVICTION_GAP]
+        if not high:
+            return None
+        misses = [d for d in high if (d.confidence > 0.5) != bool(d.outcome_binary)]
+        return round(len(misses) / len(high), 4)
+    if slug == "underconfidence":
+        if not resolved:
+            return None
+        mid = [d for d in resolved if FIFTY_FIFTY_LOW <= d.confidence <= FIFTY_FIFTY_HIGH]
+        return round(len(mid) / len(resolved), 4)
+    if slug == "weak_falsification_discipline":
+        if not all_decisions:
+            return None
+        missing = [d for d in all_decisions if not d.falsification]
+        return round(len(missing) / len(all_decisions), 4)
+    if slug == "reflection_avoidance":
+        if not resolved:
+            return None
+        return round(reviewed_count / len(resolved), 4)
+    return None
+
+
 def detect_weak_process(decisions: list, process_score: Optional[float]) -> Optional[WeaknessSignal]:
     """A low process score: thin reasoning / falsification across decisions."""
     if process_score is None or len(decisions) < MIN_SAMPLE:
