@@ -123,3 +123,20 @@ class JournalEntry(BaseModel):
 class JournalResponse(BaseModel):
     total: int
     entries: list[JournalEntry]
+
+
+class WeaknessSignalResponse(BaseModel):
+    slug: str
+    title: str
+    severity: float
+    detail: str
+    sample_size: int
+    metric: dict = {}
+
+
+class DiagnosisResponse(BaseModel):
+    state: str = Field(description='"building" or "active".')
+    resolved_count: int
+    primary_weakness: Optional[str] = None
+    summary: str
+    signals: list[WeaknessSignalResponse] = []

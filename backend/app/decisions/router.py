@@ -32,6 +32,7 @@ from ..services.decisions.review_service import (
     ReviewAlreadyExistsError,
     ReviewService,
 )
+from ..services.diagnostics.decision_diagnoser import DecisionDiagnoser
 from .schemas import (
     DecisionCreateRequest,
     DecisionListResponse,
@@ -39,11 +40,13 @@ from .schemas import (
     DecisionResolveResponse,
     DecisionResponse,
     DecisionUpdateRequest,
+    DiagnosisResponse,
     JournalEntry,
     JournalResponse,
     ReviewCreateRequest,
     ReviewResponse,
     ReviewSubmitResponse,
+    WeaknessSignalResponse,
 )
 
 router = APIRouter(tags=["decisions"])
@@ -132,6 +135,36 @@ def get_journal(
         for decision in decisions
     ]
     return JournalResponse(total=len(entries), entries=entries)
+
+
+@router.get("/diagnosis", response_model=DiagnosisResponse)
+def get_diagnosis(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> DiagnosisResponse:
+    """
+    Structured, rules-based diagnosis of the caller's biggest decision-making
+    weakness, derived deterministically from their decision history. Returns
+    a "building" state until enough decisions have resolved.
+    """
+    diagnosis = DecisionDiagnoser(db).diagnose(_user_uuid(current_user))
+    return DiagnosisResponse(
+        state=diagnosis.state,
+        resolved_count=diagnosis.resolved_count,
+        primary_weakness=diagnosis.primary_weakness,
+        summary=diagnosis.summary,
+        signals=[
+            WeaknessSignalResponse(
+                slug=s.slug,
+                title=s.title,
+                severity=s.severity,
+                detail=s.detail,
+                sample_size=s.sample_size,
+                metric=s.metric,
+            )
+            for s in diagnosis.signals
+        ],
+    )
 
 
 @router.get("/{decision_id}", response_model=DecisionResponse)
