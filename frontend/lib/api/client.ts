@@ -36,6 +36,8 @@ import type {
   DecisionCalibrationScore,
   DecisionDiagnosis,
   ActiveIntervention,
+  CreateDecisionRequest,
+  DecisionRecord,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
@@ -589,6 +591,10 @@ class ApiClient {
 
   async getDecisionDiagnosis(): Promise<DecisionDiagnosis> {
     return this.get<DecisionDiagnosis>("/decisions/diagnosis");
+  }
+
+  async createDecision(body: CreateDecisionRequest): Promise<DecisionRecord> {
+    return this.post<DecisionRecord>("/decisions", body);
   }
 
   /**

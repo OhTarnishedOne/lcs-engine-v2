@@ -420,6 +420,37 @@ export interface DecisionDiagnosis {
   signals: WeaknessSignal[];
 }
 
+export interface CreateDecisionRequest {
+  question: string;
+  confidence: number; // 0..1
+  domain?: string;
+  reasoning?: string | null;
+  falsification?: string | null;
+  resolution_date?: string | null;
+  lock?: boolean;
+}
+
+export interface DecisionRecord {
+  id: string;
+  question: string;
+  domain: string;
+  confidence: number;
+  reasoning: string | null;
+  falsification: string | null;
+  status: string;
+  is_curated: boolean;
+  locked_at: string | null;
+  resolution_date: string | null;
+  outcome_binary: boolean | null;
+  outcome_source: string | null;
+  outcome_notes: string | null;
+  resolved_at: string | null;
+  brier_score: number | null;
+  calibration_delta: number | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
 export interface ActiveIntervention {
   id: string;
   weakness_slug: string;

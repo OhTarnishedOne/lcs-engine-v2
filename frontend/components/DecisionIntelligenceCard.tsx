@@ -18,8 +18,9 @@ import type { ActiveIntervention, ScoreTrend } from "@/lib/api/types";
 const HEADER_TOOLTIP =
   "The engine behind LCS: make a decision, get scored, diagnose the pattern that's costing you, train it, then decide again.";
 
-// Decision Composer route does not exist yet, so composer-bound missions
-// currently route to Probability Lab — the only place to make a scored call.
+// Mission type drives the next action: decision-composing missions
+// (premortem / falsification / commit) go to the Decision Composer;
+// reflection missions go to the Probability Lab to review a resolved call.
 function ctaFor(intervention: ActiveIntervention | null): {
   label: string;
   href: string;
@@ -30,7 +31,7 @@ function ctaFor(intervention: ActiveIntervention | null): {
   if (intervention.intervention_type === "reflection") {
     return { label: "Review a resolved prediction", href: "/probability-lab" };
   }
-  return { label: "Make your next call", href: "/probability-lab" };
+  return { label: "Log your next decision", href: "/decisions/new" };
 }
 
 function titleCase(value: string): string {
