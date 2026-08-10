@@ -33,6 +33,9 @@ import type {
   UserPrediction,
   PredictionsResponse,
   CalibrationResponse,
+  DecisionCalibrationScore,
+  DecisionDiagnosis,
+  ActiveIntervention,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
@@ -574,6 +577,31 @@ class ApiClient {
     is_pro: boolean;
   }> {
     return this.get("/chat/session-status");
+  }
+
+  // ============================================
+  // Decision Intelligence API (gamification pipeline)
+  // ============================================
+
+  async getDecisionCalibration(): Promise<DecisionCalibrationScore> {
+    return this.get<DecisionCalibrationScore>("/gamification/calibration-score");
+  }
+
+  async getDecisionDiagnosis(): Promise<DecisionDiagnosis> {
+    return this.get<DecisionDiagnosis>("/decisions/diagnosis");
+  }
+
+  /**
+   * Current active training mission, or null when there is none.
+   * `/interventions/active` returns 404 when no mission is active — an
+   * expected empty case, not an error — so we degrade to null.
+   */
+  async getActiveIntervention(): Promise<ActiveIntervention | null> {
+    try {
+      return await this.get<ActiveIntervention>("/interventions/active");
+    } catch {
+      return null;
+    }
   }
 }
 

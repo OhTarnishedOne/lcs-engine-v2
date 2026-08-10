@@ -389,6 +389,53 @@ export interface CalibrationResponse {
   detected_biases: BiasInfo[];
 }
 
+// Decision Intelligence (gamification pipeline)
+export type ScoreTrend = "improving" | "stable" | "declining";
+
+export interface DecisionCalibrationScore {
+  user_id: string;
+  calibration_score: number | null;
+  brier_score: number | null;
+  score_family: string | null; // tier, e.g. "instinctive", "reflective"
+  trend: ScoreTrend | null;
+  resolved_predictions: number;
+  minimum_sample_met: boolean;
+  last_updated: string | null;
+}
+
+export interface WeaknessSignal {
+  slug: string;
+  title: string;
+  severity: number;
+  detail: string;
+  sample_size: number;
+  metric: Record<string, number>;
+}
+
+export interface DecisionDiagnosis {
+  state: "building" | "active";
+  resolved_count: number;
+  primary_weakness: string | null;
+  summary: string;
+  signals: WeaknessSignal[];
+}
+
+export interface ActiveIntervention {
+  id: string;
+  weakness_slug: string;
+  intervention_type: string;
+  title: string;
+  description: string;
+  target_count: number;
+  progress_count: number;
+  status: string;
+  metric_key: string | null;
+  baseline_metric: number | null;
+  post_metric: number | null;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
 // API Error
 export interface ApiError {
   detail: string;
