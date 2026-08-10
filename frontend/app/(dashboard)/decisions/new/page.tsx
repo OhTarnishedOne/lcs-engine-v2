@@ -139,8 +139,8 @@ export default function DecisionComposerPage() {
               variant="outline"
               className="flex-1 border-gray-700 text-gray-300 hover:bg-[#1A2942] hover:text-white"
             >
-              <Link href="/dashboard">
-                Back to dashboard
+              <Link href="/decisions">
+                View your decisions
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>

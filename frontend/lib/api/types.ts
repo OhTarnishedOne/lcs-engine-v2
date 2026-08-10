@@ -451,6 +451,70 @@ export interface DecisionRecord {
   updated_at: string | null;
 }
 
+export interface DecisionListResponse {
+  total: number;
+  decisions: DecisionRecord[];
+}
+
+export interface ResolveDecisionRequest {
+  outcome_binary: boolean;
+  outcome_source?: string;
+  outcome_notes?: string | null;
+}
+
+export interface DecisionResolveResult {
+  decision_id: string;
+  already_resolved: boolean;
+  brier_score: number | null;
+  is_calibrated: boolean | null;
+  calibration_score: number | null;
+  tier: string | null;
+  tier_advanced: boolean;
+  badges_awarded: string[];
+}
+
+export interface ReviewRecord {
+  id: string;
+  decision_id: string;
+  outcome_attribution: string | null;
+  was_process_sound: boolean | null;
+  identified_bias: string | null;
+  luck_vs_process: string | null;
+  thesis_revised: boolean;
+  self_flagged_bias_before_ai: boolean;
+  reflection_points: number;
+  triggers_good_loser: boolean;
+  triggers_humble_winner: boolean;
+  triggers_avoided_revenge: boolean;
+  created_at: string | null;
+}
+
+export interface CreateReviewRequest {
+  outcome_attribution?: string | null;
+  was_process_sound?: boolean | null;
+  identified_bias?: string | null;
+  luck_vs_process?: string | null;
+  thesis_revised?: boolean;
+  self_flagged_bias_before_ai?: boolean;
+  triggers_avoided_revenge?: boolean;
+}
+
+export interface ReviewSubmitResult {
+  review: ReviewRecord;
+  reflection_score: number | null;
+  badges_awarded: string[];
+}
+
+export interface JournalEntry {
+  decision: DecisionRecord;
+  review: ReviewRecord | null;
+}
+
+export interface JournalResponse {
+  total: number;
+  entries: JournalEntry[];
+}
+
 export interface ActiveIntervention {
   id: string;
   weakness_slug: string;
