@@ -77,3 +77,49 @@ class DecisionResolveResponse(BaseModel):
     tier: Optional[str] = None
     tier_advanced: bool = False
     badges_awarded: list[str] = []
+
+
+class ReviewCreateRequest(BaseModel):
+    outcome_attribution: Optional[str] = None
+    was_process_sound: Optional[bool] = None
+    identified_bias: Optional[str] = None
+    luck_vs_process: Optional[str] = Field(
+        default=None, description='"luck", "process", or "both".'
+    )
+    thesis_revised: bool = False
+    self_flagged_bias_before_ai: bool = False
+    triggers_avoided_revenge: bool = False
+
+
+class ReviewResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    decision_id: UUID
+    outcome_attribution: Optional[str] = None
+    was_process_sound: Optional[bool] = None
+    identified_bias: Optional[str] = None
+    luck_vs_process: Optional[str] = None
+    thesis_revised: bool = False
+    self_flagged_bias_before_ai: bool = False
+    reflection_points: int = 0
+    triggers_good_loser: bool = False
+    triggers_humble_winner: bool = False
+    triggers_avoided_revenge: bool = False
+    created_at: Optional[datetime] = None
+
+
+class ReviewSubmitResponse(BaseModel):
+    review: ReviewResponse
+    reflection_score: Optional[float] = None
+    badges_awarded: list[str] = []
+
+
+class JournalEntry(BaseModel):
+    decision: DecisionResponse
+    review: Optional[ReviewResponse] = None
+
+
+class JournalResponse(BaseModel):
+    total: int
+    entries: list[JournalEntry]

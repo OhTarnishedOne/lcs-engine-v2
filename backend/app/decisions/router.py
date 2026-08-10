@@ -27,6 +27,11 @@ from ..services.decisions.decision_service import (
     DecisionNotFoundError,
     DecisionService,
 )
+from ..services.decisions.review_service import (
+    DecisionNotResolvedError,
+    ReviewAlreadyExistsError,
+    ReviewService,
+)
 from .schemas import (
     DecisionCreateRequest,
     DecisionListResponse,
@@ -34,6 +39,11 @@ from .schemas import (
     DecisionResolveResponse,
     DecisionResponse,
     DecisionUpdateRequest,
+    JournalEntry,
+    JournalResponse,
+    ReviewCreateRequest,
+    ReviewResponse,
+    ReviewSubmitResponse,
 )
 
 router = APIRouter(tags=["decisions"])
@@ -89,6 +99,39 @@ def list_decisions(
         total=len(decisions),
         decisions=[DecisionResponse.model_validate(d) for d in decisions],
     )
+
+
+@router.get("/journal", response_model=JournalResponse)
+def get_journal(
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> JournalResponse:
+    """
+    The decision journal: the caller's resolved decisions, newest first, each
+    with its review (if written yet). Backs the reflection/journal view.
+    """
+    service = DecisionService(db)
+    review_service = ReviewService(db)
+    decisions = service.list_decisions(
+        _user_uuid(current_user),
+        status=DecisionStatus.RESOLVED,
+        limit=limit,
+        offset=offset,
+    )
+    entries = [
+        JournalEntry(
+            decision=DecisionResponse.model_validate(decision),
+            review=(
+                ReviewResponse.model_validate(review)
+                if (review := review_service.get_review(decision)) is not None
+                else None
+            ),
+        )
+        for decision in decisions
+    ]
+    return JournalResponse(total=len(entries), entries=entries)
 
 
 @router.get("/{decision_id}", response_model=DecisionResponse)
@@ -190,3 +233,87 @@ def resolve_decision(
             else []
         ),
     )
+
+
+@router.post(
+    "/{decision_id}/review",
+    response_model=ReviewSubmitResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def submit_review(
+    decision_id: UUID,
+    payload: ReviewCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ReviewSubmitResponse:
+    """
+    Reflect on a resolved decision. Evaluates reflection badges (Good Loser,
+    Humble Winner, ...) and refreshes the reflection score family. A decision
+    may be reviewed once.
+    """
+    decision_service = DecisionService(db)
+    try:
+        decision = decision_service.get_decision(
+            decision_id, _user_uuid(current_user)
+        )
+    except DecisionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=DECISION_NOT_FOUND_DETAIL,
+        )
+
+    try:
+        result = ReviewService(db).submit_review(
+            decision,
+            outcome_attribution=payload.outcome_attribution,
+            was_process_sound=payload.was_process_sound,
+            identified_bias=payload.identified_bias,
+            luck_vs_process=payload.luck_vs_process,
+            thesis_revised=payload.thesis_revised,
+            self_flagged_bias_before_ai=payload.self_flagged_bias_before_ai,
+            triggers_avoided_revenge=payload.triggers_avoided_revenge,
+        )
+    except DecisionNotResolvedError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Decision has not resolved yet.",
+        )
+    except ReviewAlreadyExistsError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Decision has already been reviewed.",
+        )
+
+    db.commit()
+    db.refresh(result.review)
+    return ReviewSubmitResponse(
+        review=ReviewResponse.model_validate(result.review),
+        reflection_score=result.score_update.reflection_score,
+        badges_awarded=[slug.value for slug in result.badge_result.badges_earned],
+    )
+
+
+@router.get("/{decision_id}/review", response_model=ReviewResponse)
+def get_review(
+    decision_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ReviewResponse:
+    decision_service = DecisionService(db)
+    try:
+        decision = decision_service.get_decision(
+            decision_id, _user_uuid(current_user)
+        )
+    except DecisionNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=DECISION_NOT_FOUND_DETAIL,
+        )
+
+    review = ReviewService(db).get_review(decision)
+    if review is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No review for this decision yet.",
+        )
+    return ReviewResponse.model_validate(review)
