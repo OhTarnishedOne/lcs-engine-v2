@@ -33,6 +33,8 @@ from ..services.gamification.score_family_updater import ScoreFamilyUpdater
 from .schemas import (
     BadgesResponse,
     CalibrationScoreResponse,
+    DecisionResponse,
+    DecisionUpdateRequest,
     EarnedBadge,
     EvaluateRequest,
     EvaluateResponse,
@@ -48,6 +50,11 @@ router = APIRouter(tags=["gamification"])
 # Minimum resolved predictions before a calibration score is displayed.
 # Below this, the score is too volatile to be trustworthy — and trust is the brand.
 MIN_SAMPLE_SIZE = 5
+
+# Once a decision is locked, these forecast fields are immutable. Editing them
+# after the fact would corrupt calibration scoring (you can't retroactively
+# change what you predicted once you know how reality moved).
+LOCKED_DECISION_FIELDS = ("confidence", "reasoning", "falsification")
 
 BADGE_CATALOG: dict[BadgeSlug, tuple[str, str]] = {
     BadgeSlug.FIRST_CALL: (
@@ -558,3 +565,48 @@ def evaluate_prediction(
         ),
         badges_awarded=[slug.value for slug in badge_result.badges_earned],
     )
+
+
+@router.patch("/decisions/{decision_id}", response_model=DecisionResponse)
+def update_decision(
+    decision_id: UUID,
+    payload: DecisionUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> DecisionResponse:
+    """
+    Partially update a decision.
+
+    Confidence-locking enforcement: once `locked_at` is set, any attempt to
+    modify `confidence`, `reasoning`, or `falsification` is rejected with
+    HTTP 400. This protects the integrity of the original forecast — the
+    whole calibration engine is meaningless if users (or resolution jobs)
+    can rewrite a prediction after learning how reality moved.
+    """
+    user_id = _user_uuid(current_user)
+    decision = db.query(Decision).filter(Decision.id == decision_id).first()
+
+    if decision is None or str(decision.user_id) != str(user_id):
+        # Same response for "not found" and "not yours" — don't leak existence.
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Decision not found.",
+        )
+
+    # Only the fields the client actually sent — a field left unset is not an
+    # "attempt to modify", so it must not trip the lock.
+    provided = payload.model_dump(exclude_unset=True)
+    attempted_locked_edits = [f for f in LOCKED_DECISION_FIELDS if f in provided]
+
+    if decision.locked_at is not None and attempted_locked_edits:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Decision is locked and cannot be modified",
+        )
+
+    for field, value in provided.items():
+        setattr(decision, field, value)
+
+    db.commit()
+    db.refresh(decision)
+    return DecisionResponse.model_validate(decision)
