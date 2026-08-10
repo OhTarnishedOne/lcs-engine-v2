@@ -5,8 +5,15 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.main import app
-from app.database import Base
+from app.database import Base, engine as app_engine
 from app.deps import get_db
+
+# The app's startup lifespan seeds prediction markets against the application
+# engine (app.database.engine), which is separate from the in-memory test
+# engine below and is NOT covered by the get_db dependency override. Create the
+# schema on that engine up front so startup doesn't crash when there is no
+# pre-existing dev DB — e.g. on a fresh CI checkout where lcs_dev.db is absent.
+Base.metadata.create_all(bind=app_engine)
 
 # Use in-memory SQLite for tests
 SQLALCHEMY_DATABASE_URL = "sqlite://"
