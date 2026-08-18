@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re          # <-- add this line
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -71,6 +72,7 @@ origins = [origin.strip() for origin in settings.cors_origins.split(",")]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"https://lcs-engine-v2-.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
