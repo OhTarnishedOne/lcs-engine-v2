@@ -308,6 +308,8 @@ class ProbabilityService:
                     pred.id,
                     market_id,
                 )
+                self.db.rollback()  # <-- add this: isolate this failure so the next
+                                    # prediction in the loop gets a clean session
 
         try:
             self.db.commit()
