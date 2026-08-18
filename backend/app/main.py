@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import re          # <-- add this line
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
