@@ -26,13 +26,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
 
   login: async (data: LoginRequest) => {
-    const response = await api.post<AuthResponse>("/auth/login", data);
+    const response = await api.post<AuthResponse>("/api/auth/login", data);
     api.setTokens(response.access_token, response.refresh_token);
     await get().fetchUser();
   },
 
   register: async (data: RegisterRequest) => {
-    const response = await api.post<AuthResponse>("/auth/register", data);
+    const response = await api.post<AuthResponse>("/api/auth/register", data);
     api.setTokens(response.access_token, response.refresh_token);
     await get().fetchUser();
   },
