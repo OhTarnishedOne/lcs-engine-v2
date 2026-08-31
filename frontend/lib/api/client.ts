@@ -33,6 +33,18 @@ import type {
   UserPrediction,
   PredictionsResponse,
   CalibrationResponse,
+  DecisionCalibrationScore,
+  DecisionDiagnosis,
+  ActiveIntervention,
+  CreateDecisionRequest,
+  DecisionRecord,
+  DecisionListResponse,
+  ResolveDecisionRequest,
+  DecisionResolveResult,
+  CreateReviewRequest,
+  ReviewSubmitResult,
+  ReviewRecord,
+  JournalResponse,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
@@ -574,6 +586,62 @@ class ApiClient {
     is_pro: boolean;
   }> {
     return this.get("/chat/session-status");
+  }
+
+  // ============================================
+  // Decision Intelligence API (gamification pipeline)
+  // ============================================
+
+  async getDecisionCalibration(): Promise<DecisionCalibrationScore> {
+    return this.get<DecisionCalibrationScore>("/gamification/calibration-score");
+  }
+
+  async getDecisionDiagnosis(): Promise<DecisionDiagnosis> {
+    return this.get<DecisionDiagnosis>("/decisions/diagnosis");
+  }
+
+  async createDecision(body: CreateDecisionRequest): Promise<DecisionRecord> {
+    return this.post<DecisionRecord>("/decisions", body);
+  }
+
+  async getDecisions(status?: string): Promise<DecisionListResponse> {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+    return this.get<DecisionListResponse>(`/decisions${qs}`);
+  }
+
+  async getDecisionJournal(): Promise<JournalResponse> {
+    return this.get<JournalResponse>("/decisions/journal");
+  }
+
+  async resolveDecision(
+    id: string,
+    body: ResolveDecisionRequest
+  ): Promise<DecisionResolveResult> {
+    return this.post<DecisionResolveResult>(`/decisions/${id}/resolve`, body);
+  }
+
+  async submitReview(
+    id: string,
+    body: CreateReviewRequest
+  ): Promise<ReviewSubmitResult> {
+    return this.post<ReviewSubmitResult>(`/decisions/${id}/review`, body);
+  }
+
+  async getReview(id: string): Promise<ReviewRecord> {
+    return this.get<ReviewRecord>(`/decisions/${id}/review`);
+  }
+
+  /**
+   * Current active training mission, or null when there is none.
+   * `/interventions/active` returns 404 when no mission is active — an
+   * expected empty case, not an error — so we degrade to null.
+   */
+  async getActiveIntervention(): Promise<ActiveIntervention | null> {
+    try {
+      return await this.get<ActiveIntervention>("/interventions/active");
+    } catch {
+      return null;
+    }
   }
 }
 

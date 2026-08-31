@@ -72,6 +72,33 @@ class BadgesResponse(BaseModel):
     in_progress: list[InProgressBadge]
 
 
+class DecisionUpdateRequest(BaseModel):
+    """
+    Partial update for a Decision. `confidence`, `reasoning`, and
+    `falsification` are the locked forecast fields — attempting to change
+    any of them on a locked decision is rejected (see router).
+    """
+
+    confidence: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    reasoning: Optional[str] = None
+    falsification: Optional[str] = None
+    resolution_date: Optional[datetime] = None
+
+
+class DecisionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    question: str
+    confidence: float
+    reasoning: Optional[str] = None
+    falsification: Optional[str] = None
+    status: str
+    locked_at: Optional[datetime] = None
+    resolution_date: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
 class EvaluateRequest(BaseModel):
     prediction_id: UUID
 

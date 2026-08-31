@@ -884,3 +884,290 @@ class TestSelfFlaggedBias:
         result = evaluator.on_review_submitted(review, decision, profile)
 
         assert "self_flagged_bias" not in result.points_breakdown
+
+
+# ---------------------------------------------------------------------------
+# on_decision_resolved lifecycle event
+# ---------------------------------------------------------------------------
+
+def _resolved_db(badge_exists=False):
+    """
+    DB mock tailored for on_decision_resolved.
+
+    UserScoreSnapshot queries return None so `_calibration_trending_up` is
+    naturally False (no snapshot history) — this isolates the streak/badge
+    logic under test from the trend bonus.
+    """
+    db = MagicMock()
+
+    def query_side_effect(model):
+        q = MagicMock()
+        if model == UserBadge:
+            inner = MagicMock()
+            inner.first.return_value = MagicMock() if badge_exists else None
+            q.filter.return_value = inner
+        elif model == UserScoreSnapshot:
+            q.filter.return_value.order_by.return_value.first.return_value = None
+        return q
+
+    db.query.side_effect = query_side_effect
+    db.add = MagicMock()
+    db.flush = MagicMock()
+    return db
+
+
+class TestDecisionResolved:
+    """
+    on_decision_resolved is the badge lifecycle event fired when a prediction
+    resolves. It: awards resolution points, tracks the calibration streak,
+    awards CALIBRATED_RUN at streak 5, and folds in milestone points from the
+    score-family update.
+    """
+
+    def test_calibrated_outcome_awards_points_and_increments_streak(self):
+        evaluator = PointsBadgeEvaluator(_resolved_db())
+        profile = make_profile(calibration_streak=0)
+
+        result = evaluator.on_decision_resolved(
+            make_decision(), True, profile, make_score_update()
+        )
+
+        assert result.points_breakdown.get("decision_resolved") == 15
+        assert result.points_breakdown.get("calibrated_outcome") == 25
+        assert profile.calibration_streak == 1
+
+    def test_uncalibrated_outcome_resets_streak_and_skips_bonus(self):
+        evaluator = PointsBadgeEvaluator(_resolved_db())
+        profile = make_profile(calibration_streak=4)
+
+        result = evaluator.on_decision_resolved(
+            make_decision(), False, profile, make_score_update()
+        )
+
+        assert profile.calibration_streak == 0
+        assert "calibrated_outcome" not in result.points_breakdown
+        # Resolution itself is still credited.
+        assert result.points_breakdown.get("decision_resolved") == 15
+
+    def test_calibrated_run_badge_awarded_at_streak_five(self):
+        evaluator = PointsBadgeEvaluator(_resolved_db())
+        profile = make_profile(calibration_streak=4)  # becomes 5
+
+        result = evaluator.on_decision_resolved(
+            make_decision(), True, profile, make_score_update()
+        )
+
+        assert BadgeSlug.CALIBRATED_RUN in result.badges_earned
+        assert result.points_breakdown.get("calibration_streak_5") == 100
+
+    def test_calibrated_run_badge_not_awarded_before_streak_five(self):
+        evaluator = PointsBadgeEvaluator(_resolved_db())
+        profile = make_profile(calibration_streak=2)  # becomes 3
+
+        result = evaluator.on_decision_resolved(
+            make_decision(), True, profile, make_score_update()
+        )
+
+        assert BadgeSlug.CALIBRATED_RUN not in result.badges_earned
+        assert "calibration_streak_5" not in result.points_breakdown
+
+    def test_calibrated_run_badge_is_idempotent(self):
+        """Streak stays >= 5 on later resolutions, but the badge earns once."""
+        evaluator = PointsBadgeEvaluator(_resolved_db(badge_exists=True))
+        profile = make_profile(calibration_streak=9)  # becomes 10
+
+        result = evaluator.on_decision_resolved(
+            make_decision(), True, profile, make_score_update()
+        )
+
+        assert BadgeSlug.CALIBRATED_RUN not in result.badges_earned
+        assert "calibration_streak_5" not in result.points_breakdown
+
+    def test_milestone_points_flow_through_from_score_update(self):
+        evaluator = PointsBadgeEvaluator(_resolved_db())
+        profile = make_profile(calibration_streak=0)
+        score_update = make_score_update(
+            milestone_points=100,
+            milestone_breakdown={"calibration_score_unlocked": 100},
+        )
+
+        result = evaluator.on_decision_resolved(
+            make_decision(), True, profile, score_update
+        )
+
+        assert result.points_breakdown.get("calibration_score_unlocked") == 100
+
+
+# ---------------------------------------------------------------------------
+# on_insight_loop_completed — Bias Corrected badge
+# ---------------------------------------------------------------------------
+
+class TestInsightLoopBiasCorrected:
+    """
+    Bias Corrected fires when a completed insight loop reports a meaningful
+    improvement delta (>= 10). Below that threshold it must not fire.
+    """
+
+    def _loop_db(self, badge_exists=False, insight_loop_count=2):
+        db = MagicMock()
+
+        def query_side_effect(model):
+            q = MagicMock()
+            if model == UserBadge:
+                inner = MagicMock()
+                inner.first.return_value = MagicMock() if badge_exists else None
+                q.filter.return_value = inner
+            elif model == InsightLoop:
+                # != 1 so LOOP_CLOSED (completed == 1) does not also fire here.
+                q.filter.return_value.count.return_value = insight_loop_count
+            elif model == Decision:
+                q.filter.return_value.count.return_value = 0
+            return q
+
+        db.query.side_effect = query_side_effect
+        db.add = MagicMock()
+        db.flush = MagicMock()
+        return db
+
+    def _loop(self, improvement_delta):
+        loop = MagicMock(spec=InsightLoop)
+        loop.user_id = uuid4()
+        loop.domain = "investing"
+        loop.improvement_delta = improvement_delta
+        return loop
+
+    def test_bias_corrected_awarded_on_large_improvement(self):
+        evaluator = PointsBadgeEvaluator(self._loop_db())
+
+        result = evaluator.on_insight_loop_completed(
+            self._loop(improvement_delta=12.0), make_profile()
+        )
+
+        assert BadgeSlug.BIAS_CORRECTED in result.badges_earned
+        assert "bias_corrected_badge" in result.points_breakdown
+
+    def test_bias_corrected_not_awarded_on_small_improvement(self):
+        evaluator = PointsBadgeEvaluator(self._loop_db())
+
+        result = evaluator.on_insight_loop_completed(
+            self._loop(improvement_delta=5.0), make_profile()
+        )
+
+        assert BadgeSlug.BIAS_CORRECTED not in result.badges_earned
+
+    def test_bias_corrected_is_idempotent(self):
+        evaluator = PointsBadgeEvaluator(self._loop_db(badge_exists=True))
+
+        result = evaluator.on_insight_loop_completed(
+            self._loop(improvement_delta=20.0), make_profile()
+        )
+
+        assert BadgeSlug.BIAS_CORRECTED not in result.badges_earned
+        assert "bias_corrected_badge" not in result.points_breakdown
+
+
+# ---------------------------------------------------------------------------
+# Idempotency against a REAL database session
+# ---------------------------------------------------------------------------
+
+class TestBadgeIdempotencyRealDB:
+    """
+    The mock-based idempotency tests simulate "badge already exists". These
+    tests use a real SQLite session to prove the guarantee end-to-end:
+    awarding the same badge twice writes exactly one UserBadge row and does
+    not double-count points.
+    """
+
+    def _seed_user_and_profile(self, db):
+        from app.auth.utils import hash_password
+        from app.db.models import User
+        from app.db.models.gamification import UserGamificationProfile
+
+        user_uuid = uuid4()
+        db.add(
+            User(
+                id=str(user_uuid),
+                email=f"{user_uuid}@test.com",
+                password_hash=hash_password("test"),
+            )
+        )
+        db.flush()
+        profile = UserGamificationProfile(user_id=user_uuid)
+        db.add(profile)
+        db.flush()
+        return user_uuid, profile
+
+    def test_try_award_badge_creates_single_row(self, db):
+        user_uuid, _ = self._seed_user_and_profile(db)
+        evaluator = PointsBadgeEvaluator(db)
+
+        first_batch: list = []
+        first = evaluator._try_award_badge(
+            user_uuid, BadgeSlug.CALIBRATED_RUN, None, None, first_batch
+        )
+        second_batch: list = []
+        second = evaluator._try_award_badge(
+            user_uuid, BadgeSlug.CALIBRATED_RUN, None, None, second_batch
+        )
+        db.flush()
+
+        assert first is True
+        assert second is False
+        assert first_batch == [BadgeSlug.CALIBRATED_RUN]
+        assert second_batch == []
+
+        rows = (
+            db.query(UserBadge)
+            .filter(
+                UserBadge.user_id == user_uuid,
+                UserBadge.badge_slug == BadgeSlug.CALIBRATED_RUN,
+            )
+            .count()
+        )
+        assert rows == 1
+
+    def test_repeated_resolution_does_not_duplicate_calibrated_run(self, db):
+        """
+        Drive calibration_streak past 5 twice through on_decision_resolved on a
+        real session; CALIBRATED_RUN must exist exactly once and its points
+        must be credited only on first award.
+        """
+        user_uuid, profile = self._seed_user_and_profile(db)
+
+        # A real resolved decision to attribute the badge to.
+        decision = Decision(
+            user_id=user_uuid,
+            question="Will it resolve yes?",
+            domain=DecisionDomain.INVESTING,
+            confidence=0.9,
+            status=DecisionStatus.RESOLVED,
+            outcome_binary=True,
+        )
+        db.add(decision)
+        db.flush()
+
+        evaluator = PointsBadgeEvaluator(db)
+        score_update = make_score_update()
+
+        profile.calibration_streak = 4  # first call pushes to 5 → award
+        result_first = evaluator.on_decision_resolved(
+            decision, True, profile, score_update
+        )
+        result_second = evaluator.on_decision_resolved(
+            decision, True, profile, score_update
+        )
+        db.flush()
+
+        assert BadgeSlug.CALIBRATED_RUN in result_first.badges_earned
+        assert BadgeSlug.CALIBRATED_RUN not in result_second.badges_earned
+        assert "calibration_streak_5" not in result_second.points_breakdown
+
+        rows = (
+            db.query(UserBadge)
+            .filter(
+                UserBadge.user_id == user_uuid,
+                UserBadge.badge_slug == BadgeSlug.CALIBRATED_RUN,
+            )
+            .count()
+        )
+        assert rows == 1

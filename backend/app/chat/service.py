@@ -6,6 +6,7 @@ This is where the magic happens - personalizing Claude based on user's onboardin
 """
 
 import json
+import logging
 import re
 from datetime import datetime, UTC
 from typing import AsyncGenerator, Optional
@@ -17,6 +18,7 @@ from ..integrations import ResilientAIClient
 from ..settings import get_settings
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 
 # Topic-to-interest mapping for deterministic match context
@@ -211,6 +213,63 @@ class ChatService:
 
         return "\n".join(lines)
 
+    def _get_diagnosis_context(self, user_id: str) -> Optional[str]:
+        """
+        Build decision-diagnosis context for the system prompt so the tutor
+        can coach against the student's measured weakness (grounded in their
+        own data), rather than guessing at biases.
+
+        Read-only and defensive: any failure returns None so chat never breaks,
+        and it never mutates intervention state (no progress sync here).
+        """
+        try:
+            from ..gamification.user_ids import user_id_to_uuid
+            from ..db.models.gamification import UserTrainingIntervention
+            from ..services.diagnostics.decision_diagnoser import DecisionDiagnoser
+
+            uid = user_id_to_uuid(user_id)
+            diagnosis = DecisionDiagnoser(self.db).diagnose(uid)
+            if diagnosis.state != "active" or not diagnosis.signals:
+                return None
+
+            primary = diagnosis.signals[0]
+            lines = [
+                f"LCS has diagnosed this student's decision-making from "
+                f"{diagnosis.resolved_count} resolved decisions.",
+                f"Primary weakness — {primary.title}: {primary.detail}",
+            ]
+            if len(diagnosis.signals) > 1:
+                others = ", ".join(s.title for s in diagnosis.signals[1:])
+                lines.append(f"Secondary patterns: {others}.")
+
+            active = (
+                self.db.query(UserTrainingIntervention)
+                .filter(
+                    UserTrainingIntervention.user_id == uid,
+                    UserTrainingIntervention.status == "active",
+                )
+                .order_by(UserTrainingIntervention.started_at.desc())
+                .first()
+            )
+            if active is not None:
+                lines.append(
+                    f'Active training mission: "{active.title}" — '
+                    f"{active.description} "
+                    f"(progress {active.progress_count}/{active.target_count})."
+                )
+
+            lines.append(
+                "When it fits the conversation, coach toward this weakness. "
+                "Ground it in their own decisions — do not invent numbers or "
+                "claims. Help them separate confidence from evidence. Stay "
+                "encouraging: a wrong call with sound process is still good "
+                "decision-making."
+            )
+            return "\n".join(lines)
+        except Exception:
+            logger.exception("Failed to build diagnosis context for chat")
+            return None
+
     def build_system_prompt(self, user_profile: Optional[UserProfile], user_message: str = "") -> str:
         """
         Build a dynamic system prompt using the user's onboarding data.
@@ -302,6 +361,12 @@ class ChatService:
         if prediction_context:
             prediction_section = f"\nPROBABILITY LAB:\n{prediction_context}\n"
 
+        # Build decision-diagnosis context (from the gamification pipeline)
+        diagnosis_section = ""
+        diagnosis_context = self._get_diagnosis_context(user_profile.user_id)
+        if diagnosis_context:
+            diagnosis_section = f"\nDECISION DIAGNOSIS:\n{diagnosis_context}\n"
+
         # Deeper context from onboarding conversation
         conversation_context = ""
         if user_profile.motivation:
@@ -342,7 +407,7 @@ RULES:
 10. You can use simple examples with made-up numbers. "Imagine you invest $100 in..."
 11. Frame concepts through the lens of their time horizon ({time_horizon_display}). Short-horizon learners need to understand liquidity and risk differently than long-horizon learners.
 {match_section}
-{prediction_section}ABOUT LCS ENGINE:
+{prediction_section}{diagnosis_section}ABOUT LCS ENGINE:
 LCS stands for Learn, Choose, Strategize. It's a platform that helps people learn about investing through personalized education, AI conversation, paper trading (simulated), and probability exercises. It is NOT a brokerage. It does NOT manage real money. It's a safe space to learn without risk.
 
 WHAT YOU CAN HELP WITH:

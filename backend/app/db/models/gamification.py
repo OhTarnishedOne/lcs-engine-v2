@@ -324,3 +324,48 @@ class InsightLoop(Base):
         Index("ix_insight_loops_user_id", "user_id"),
         Index("ix_insight_loops_status", "status"),
     )
+
+
+class InterventionStatus(str, PyEnum):
+    ACTIVE    = "active"
+    COMPLETED = "completed"
+    ABANDONED = "abandoned"
+
+
+class UserTrainingIntervention(Base):
+    """
+    A targeted training mission prescribed from a diagnosed weakness.
+
+    Progress is anchored, not timestamp-based: at start we record how many
+    qualifying actions already exist; progress = current qualifying count minus
+    that anchor, so it counts only NEW actions regardless of clock precision.
+    baseline_metric/post_metric capture the weakness metric before and after,
+    so LCS can tell whether the intervention actually worked.
+    """
+
+    __tablename__ = "user_training_interventions"
+
+    id                = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id           = Column(GamificationUserIdType, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    weakness_slug     = Column(String(50), nullable=False)
+    intervention_type = Column(String(50), nullable=False)
+    title             = Column(Text, nullable=False)
+    description       = Column(Text, nullable=False)
+    target_count      = Column(Integer, nullable=False, default=3)
+    progress_count    = Column(Integer, nullable=False, default=0)
+    baseline_qualifying_count = Column(Integer, nullable=False, default=0)
+    status            = Column(String(20), nullable=False, default="active")
+    metric_key        = Column(String(50), nullable=True)
+    baseline_metric   = Column(Float, nullable=True)
+    post_metric       = Column(Float, nullable=True)
+    started_at        = Column(DateTime, default=func.now())
+    completed_at      = Column(DateTime, nullable=True)
+    created_at        = Column(DateTime, default=func.now())
+    updated_at        = Column(DateTime, default=func.now(), onupdate=func.now())
+
+    user = relationship("User", viewonly=True)
+
+    __table_args__ = (
+        Index("ix_interventions_user_id", "user_id"),
+        Index("ix_interventions_user_status", "user_id", "status"),
+    )

@@ -389,6 +389,148 @@ export interface CalibrationResponse {
   detected_biases: BiasInfo[];
 }
 
+// Decision Intelligence (gamification pipeline)
+export type ScoreTrend = "improving" | "stable" | "declining";
+
+export interface DecisionCalibrationScore {
+  user_id: string;
+  calibration_score: number | null;
+  brier_score: number | null;
+  score_family: string | null; // tier, e.g. "instinctive", "reflective"
+  trend: ScoreTrend | null;
+  resolved_predictions: number;
+  minimum_sample_met: boolean;
+  last_updated: string | null;
+}
+
+export interface WeaknessSignal {
+  slug: string;
+  title: string;
+  severity: number;
+  detail: string;
+  sample_size: number;
+  metric: Record<string, number>;
+}
+
+export interface DecisionDiagnosis {
+  state: "building" | "active";
+  resolved_count: number;
+  primary_weakness: string | null;
+  summary: string;
+  signals: WeaknessSignal[];
+}
+
+export interface CreateDecisionRequest {
+  question: string;
+  confidence: number; // 0..1
+  domain?: string;
+  reasoning?: string | null;
+  falsification?: string | null;
+  resolution_date?: string | null;
+  lock?: boolean;
+}
+
+export interface DecisionRecord {
+  id: string;
+  question: string;
+  domain: string;
+  confidence: number;
+  reasoning: string | null;
+  falsification: string | null;
+  status: string;
+  is_curated: boolean;
+  locked_at: string | null;
+  resolution_date: string | null;
+  outcome_binary: boolean | null;
+  outcome_source: string | null;
+  outcome_notes: string | null;
+  resolved_at: string | null;
+  brier_score: number | null;
+  calibration_delta: number | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface DecisionListResponse {
+  total: number;
+  decisions: DecisionRecord[];
+}
+
+export interface ResolveDecisionRequest {
+  outcome_binary: boolean;
+  outcome_source?: string;
+  outcome_notes?: string | null;
+}
+
+export interface DecisionResolveResult {
+  decision_id: string;
+  already_resolved: boolean;
+  brier_score: number | null;
+  is_calibrated: boolean | null;
+  calibration_score: number | null;
+  tier: string | null;
+  tier_advanced: boolean;
+  badges_awarded: string[];
+}
+
+export interface ReviewRecord {
+  id: string;
+  decision_id: string;
+  outcome_attribution: string | null;
+  was_process_sound: boolean | null;
+  identified_bias: string | null;
+  luck_vs_process: string | null;
+  thesis_revised: boolean;
+  self_flagged_bias_before_ai: boolean;
+  reflection_points: number;
+  triggers_good_loser: boolean;
+  triggers_humble_winner: boolean;
+  triggers_avoided_revenge: boolean;
+  created_at: string | null;
+}
+
+export interface CreateReviewRequest {
+  outcome_attribution?: string | null;
+  was_process_sound?: boolean | null;
+  identified_bias?: string | null;
+  luck_vs_process?: string | null;
+  thesis_revised?: boolean;
+  self_flagged_bias_before_ai?: boolean;
+  triggers_avoided_revenge?: boolean;
+}
+
+export interface ReviewSubmitResult {
+  review: ReviewRecord;
+  reflection_score: number | null;
+  badges_awarded: string[];
+}
+
+export interface JournalEntry {
+  decision: DecisionRecord;
+  review: ReviewRecord | null;
+}
+
+export interface JournalResponse {
+  total: number;
+  entries: JournalEntry[];
+}
+
+export interface ActiveIntervention {
+  id: string;
+  weakness_slug: string;
+  intervention_type: string;
+  title: string;
+  description: string;
+  target_count: number;
+  progress_count: number;
+  status: string;
+  metric_key: string | null;
+  baseline_metric: number | null;
+  post_metric: number | null;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
 // API Error
 export interface ApiError {
   detail: string;

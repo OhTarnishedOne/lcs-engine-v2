@@ -8,6 +8,7 @@ import {
   Layers,
   TrendingUp,
   Target,
+  ClipboardList,
   MessageSquare,
   X,
   BarChart3,
@@ -31,6 +32,7 @@ const PRO_ROUTES = new Set(["/probability-lab", "/paper-trade"]);
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Decisions", href: "/decisions", icon: ClipboardList },
   { name: "Probability Lab", href: "/probability-lab", icon: Target },
   { name: "AI Chat", href: "/chat", icon: MessageSquare },
   { name: "Strategies", href: "/strategies", icon: Layers },

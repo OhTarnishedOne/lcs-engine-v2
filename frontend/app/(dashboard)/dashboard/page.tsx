@@ -18,7 +18,7 @@ import { api } from "@/lib/api/client";
 import { useAuthStore } from "@/stores/auth-store";
 import { Button } from "@/components/ui/button";
 import { UpgradeSuccessBanner } from "@/components/UpgradeSuccessBanner";
-import { CalibrationScoreCard } from "@/components/CalibrationScoreCard";
+import { DecisionIntelligenceCard } from "@/components/DecisionIntelligenceCard";
 import { useBillingStatus } from "@/hooks/useBillingStatus";
 import { useUpgrade } from "@/hooks/useUpgrade";
 
@@ -155,14 +155,14 @@ export default function DashboardPage() {
         </motion.div>
       )}
 
-      {/* Calibration Score */}
+      {/* Decision Intelligence Engine */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
         className="mb-6"
       >
-        <CalibrationScoreCard />
+        <DecisionIntelligenceCard />
       </motion.div>
 
       {/* Quick Actions */}

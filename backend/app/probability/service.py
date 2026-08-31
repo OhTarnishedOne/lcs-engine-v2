@@ -295,16 +295,28 @@ class ProbabilityService:
             self._update_calibration(user_id)
 
         # Dual-write to gamification engine (ADR-001). Failures must not break Lab.
+        #
+        # Fault isolation is two-layered:
+        #   1. The core Lab resolution (market state + Brier scores) is already
+        #      committed above, so it is durable no matter what happens next.
+        #   2. Each prediction's gamification write runs inside its own SAVEPOINT
+        #      (begin_nested). A failure rolls back only that prediction's partial
+        #      writes — it never poisons the shared session, so the other
+        #      predictions and the final commit still succeed.
         for pred in predictions:
             try:
                 from ..services.gamification.probability_bridge import (
                     sync_prediction_resolution_to_gamification,
                 )
 
-                sync_prediction_resolution_to_gamification(self.db, pred, market, actual)
+                with self.db.begin_nested():
+                    sync_prediction_resolution_to_gamification(
+                        self.db, pred, market, actual
+                    )
             except Exception:
                 logger.exception(
-                    "Gamification dual-write failed for prediction %s (market %s)",
+                    "Gamification dual-write failed for prediction %s (market %s); "
+                    "Lab resolution is unaffected",
                     pred.id,
                     market_id,
                 )
