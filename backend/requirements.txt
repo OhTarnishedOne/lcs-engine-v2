@@ -5,7 +5,10 @@ python-multipart>=0.0.9
 sse-starlette>=1.6.0
 
 # Database
-sqlalchemy>=2.0.25
+# Cap below 2.1: SQLAlchemy 2.1 switched the default `postgresql://` driver
+# from psycopg2 to psycopg (v3), which we don't ship — an unpinned install
+# pulls 2.1 and breaks Postgres migrations/boot with "No module named 'psycopg'".
+sqlalchemy>=2.0.25,<2.1
 alembic>=1.13.0
 psycopg2-binary>=2.9.9
 
