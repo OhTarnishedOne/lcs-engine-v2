@@ -137,6 +137,61 @@ class ScoreFamilyUpdater:
             milestone_breakdown=milestone_breakdown,
         )
 
+    def update_after_review(
+        self,
+        decision: Decision,
+        review:   DecisionReview,
+        profile:  UserGamificationProfile,
+    ) -> ScoreFamilyUpdate:
+        """
+        Called after a decision review is submitted.
+
+        A review does not resolve anything, so process/calibration and the tier
+        are left as-is (tier transitions and milestone bonuses stay a
+        resolution-time event). It recomputes the reflection family — which is
+        exactly what a review changes — and the improvement family and composite
+        that depend on it, then writes a fresh snapshot so the user sees their
+        reflection reflected immediately.
+        """
+        resolved_calls    = profile.resolved_calls
+        process_score     = profile.process_score or 0.0
+        calibration_score = profile.calibration_score
+
+        reflection_score = self._reflection_score(decision.user_id, profile)
+        improvement_score, _ = self._improvement_score(
+            decision.user_id, profile, resolved_calls
+        )
+        lcs_score = self._composite(
+            process_score, calibration_score,
+            reflection_score, improvement_score, resolved_calls,
+        )
+
+        profile.reflection_score  = round(reflection_score, 2) if reflection_score is not None else None
+        profile.improvement_score = round(improvement_score, 2) if improvement_score is not None else None
+        profile.lcs_score         = round(lcs_score, 2)
+
+        self.db.flush()
+        self._write_snapshot(profile, decision.id, resolved_calls)
+
+        return ScoreFamilyUpdate(
+            user_id=decision.user_id,
+            decision_id=decision.id,
+            process_score=profile.process_score or 0.0,
+            calibration_score=profile.calibration_score,
+            reflection_score=profile.reflection_score,
+            improvement_score=profile.improvement_score,
+            lcs_score=profile.lcs_score,
+            previous_tier=profile.tier,
+            new_tier=profile.tier,
+            tier_advanced=False,
+            total_calls=profile.total_calls,
+            resolved_calls=resolved_calls,
+            calibration_just_unlocked=False,
+            improvement_just_unlocked=False,
+            milestone_points=0,
+            milestone_breakdown={},
+        )
+
     # -----------------------------------------------------------------------
     # FIX #3: call_number is now an explicit parameter
     # -----------------------------------------------------------------------
