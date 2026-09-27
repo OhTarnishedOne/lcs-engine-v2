@@ -1,6 +1,6 @@
 "use client";
 
-import { Header, Sidebar, MobileSidebar } from "@/components/layout";
+import { Header, Sidebar, MobileSidebar, BottomNav } from "@/components/layout";
 import { useAuthStore } from "@/stores/auth-store";
 import { DisclaimerFooter } from "@/components/Disclaimer";
 
@@ -27,11 +27,14 @@ export default function DashboardLayout({
     <div className="flex min-h-screen bg-[#0A1628]">
       <Sidebar />
       <MobileSidebar />
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <Header />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 pb-24 sm:p-6 lg:pb-6">
+          {children}
+        </main>
         <DisclaimerFooter />
       </div>
+      <BottomNav />
     </div>
   );
 }

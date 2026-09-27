@@ -514,7 +514,7 @@ export default function PaperTradePage() {
               initial={{ scale: 0.95 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.95 }}
-              className="w-full max-w-sm rounded-xl border border-gray-800 bg-[#111827] p-6"
+              className="max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto rounded-xl border border-gray-800 bg-[#111827] p-6"
               onClick={(e) => e.stopPropagation()}
             >
               <h3 className="mb-4 text-lg font-semibold text-white">

@@ -255,7 +255,7 @@ export default function ChatPage() {
         50% { opacity: 0; }
       }
     ` }} />
-    <div className="flex h-[calc(100vh-8rem)] overflow-hidden rounded-xl border border-gray-800 bg-[#111827]">
+    <div className="flex h-[calc(100dvh-12rem)] overflow-hidden rounded-xl border border-gray-800 bg-[#111827] lg:h-[calc(100vh-8rem)]">
       {/* Mobile sidebar toggle */}
       <Button
         variant="ghost"

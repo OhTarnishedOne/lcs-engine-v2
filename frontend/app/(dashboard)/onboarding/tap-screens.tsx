@@ -213,7 +213,7 @@ export default function TapScreens({ onComplete, onSkip, initialResponses, onSav
   };
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-8rem)] max-w-lg flex-col">
+    <div className="mx-auto flex h-[calc(100dvh-12rem)] max-w-lg flex-col lg:h-[calc(100vh-8rem)]">
       {/* Progress dots */}
       <div className="mb-8 flex justify-center gap-2">
         {SCREENS.map((_, i) => (

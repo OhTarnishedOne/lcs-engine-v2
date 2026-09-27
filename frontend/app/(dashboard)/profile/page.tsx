@@ -529,7 +529,7 @@ function DeleteAccountSection() {
           onClick={() => { setShowModal(false); setPassword(""); setError(null); }}
         >
           <div
-            className="w-full max-w-md rounded-xl border border-red-500/30 bg-[#111827] p-6"
+            className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-xl border border-red-500/30 bg-[#111827] p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-lg font-semibold text-red-400 mb-2">Confirm account deletion</h3>

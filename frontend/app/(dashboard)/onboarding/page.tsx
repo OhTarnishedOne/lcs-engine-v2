@@ -371,7 +371,7 @@ export default function OnboardingPage() {
         }
       ` }} />
 
-      <div className="mx-auto flex h-[calc(100vh-8rem)] max-w-2xl flex-col">
+      <div className="mx-auto flex h-[calc(100dvh-12rem)] max-w-2xl flex-col lg:h-[calc(100vh-8rem)]">
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-3">

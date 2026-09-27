@@ -33,7 +33,10 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-gray-800 bg-[#0A1628]/95 backdrop-blur supports-[backdrop-filter]:bg-[#0A1628]/80">
+    <header
+      className="sticky top-0 z-40 border-b border-gray-800 bg-[#0A1628]/95 backdrop-blur supports-[backdrop-filter]:bg-[#0A1628]/80"
+      style={{ paddingTop: "env(safe-area-inset-top)" }}
+    >
       <div className="flex h-16 items-center justify-between px-4 sm:px-6">
         {/* Left: Mobile menu button + Logo (mobile only) */}
         <div className="flex items-center gap-4">
